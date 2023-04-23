@@ -46,9 +46,6 @@ dependencies:
   reflect-metadata:
     specifier: ^0.1.13
     version: 0.1.13
-  rxjs:
-    specifier: ^7.2.0
-    version: 7.2.0
   telegraf:
     specifier: ^4.12.2
     version: 4.12.2
