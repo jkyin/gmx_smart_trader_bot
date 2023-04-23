@@ -2645,7 +2645,7 @@ const gmxTransforms = [];
 const additionalTypeDefs = [] as any[];
 const gmxHandler = new GraphqlHandler({
               name: "gmx",
-              config: {"endpoint":"https://api.thegraph.com/subgraphs/name/nissoh/gmx-arbitrum","retry":2,"timeout":10000},
+              config: {"endpoint":"https://api.thegraph.com/subgraphs/name/nissoh/gmx-arbitrum","retry":3,"timeout":10000},
               baseDir,
               cache,
               pubsub,
