@@ -1,0 +1,18 @@
+{
+    "overrides": [
+      {
+        "files": ["*.graphql"],
+        "parser": "@graphql-eslint/eslint-plugin",
+        "parserOptions": {
+          "skipGraphQLConfig": true,
+          "schema": [".graphclient/schema.graphql"]
+        },
+        "plugins": ["@graphql-eslint"],
+        "rules": {
+          "@graphql-eslint/known-type-names": "error",
+          "@graphql-eslint/fields-on-correct-type": "error",
+          "@graphql-eslint/no-unused variables": "warn"
+        }
+      }
+    ]
+  }

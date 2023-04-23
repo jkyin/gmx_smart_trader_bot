@@ -1,12 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
-import { GMXWSService } from './gmx.service';
+import { GMXService } from './gmx.service';
 
 @Controller('gmx')
-export class GMXWSController {
-  constructor(private readonly service: GMXWSService) {}
+export class GMXController {
+  constructor(private readonly service: GMXService) {}
 
-  @Get('status')
-  status() {
-    return this.service.checkStatus();
+  @Get('currentWatching')
+  async currentWatching() {
+    return JSON.stringify(await this.service.currentWatching());
   }
 }

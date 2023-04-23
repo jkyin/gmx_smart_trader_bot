@@ -17,22 +17,32 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "build-graphql": "graphclient build",
+    "graphiql": "graphclient serve-dev"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^2.3.1",
     "@nestjs/core": "^9.0.0",
+    "@nestjs/event-emitter": "^1.4.1",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/schedule": "^2.2.1",
-    "@types/ws": "^8.5.4",
+    "@types/lodash": "^4.14.194",
+    "@types/marked": "^4.0.8",
+    "bignumber.js": "^9.1.1",
+    "currency.js": "^2.0.4",
+    "dayjs": "^1.11.7",
+    "lodash": "^4.17.21",
+    "marked": "^4.3.0",
     "nestjs-telegraf": "^2.6.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0",
-    "telegraf": "^4.12.2",
-    "ws": "^8.13.0"
+    "telegraf": "^4.12.2"
   },
   "devDependencies": {
+    "@graphprotocol/client-cli": "^2.2.21",
+    "@graphql-eslint/eslint-plugin": "^3.18.0",
     "@nestjs/cli": "^9.0.0",
     "@nestjs/schematics": "^9.0.0",
     "@nestjs/testing": "^9.0.0",

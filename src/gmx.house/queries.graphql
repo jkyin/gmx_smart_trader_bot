@@ -1,0 +1,107 @@
+query AccountTradeList($pageSize: Int = 10, $account: String, $status: Status) @live {
+    trades(
+      first: $pageSize
+      skip: 0
+      where: { account: $account, status: $status }
+    ) {
+      ...tradeFields
+    }
+  }
+
+
+fragment increasePositionFields on IncreasePosition {
+  id
+  timestamp
+  account
+  collateralToken
+  indexToken
+  isLong
+  key
+  collateralDelta
+  sizeDelta
+  fee
+  price
+}
+
+fragment decreasePositionFields on DecreasePosition {
+  id
+  timestamp
+  account
+  collateralToken
+  indexToken
+  isLong
+  key
+  collateralDelta
+  sizeDelta
+  fee
+  price
+}
+
+fragment updatePositionFields on UpdatePosition {
+  id
+  timestamp
+  key
+  size
+  markPrice
+  collateral
+  reserveAmount
+  realisedPnl
+  averagePrice
+  entryFundingRate
+}
+
+fragment closePositionFields on ClosePosition {
+  id
+  timestamp
+  key
+  size
+  collateral
+  reserveAmount
+  realisedPnl
+  averagePrice
+  entryFundingRate
+}
+
+fragment liquidatePositionFields on LiquidatePosition {
+  id
+  timestamp
+  key
+  account
+  collateralToken
+  indexToken
+  isLong
+  size
+  collateral
+  reserveAmount
+  realisedPnl
+  markPrice
+}
+
+fragment tradeFields on Trade {
+  id
+  timestamp
+  account
+  collateralToken
+  indexToken
+  isLong
+  key
+  status
+
+  increaseList(first: $pageSize) { ...increasePositionFields }
+  decreaseList(first: $pageSize) { ...decreasePositionFields }
+  updateList(first: $pageSize) { ...updatePositionFields }
+
+  sizeDelta
+  collateralDelta
+  fee
+  size
+  collateral
+  averagePrice
+
+  realisedPnl
+  realisedPnlPercentage
+  settledTimestamp
+  closedPosition { ...closePositionFields }
+  liquidatedPosition { ...liquidatePositionFields }
+  
+}

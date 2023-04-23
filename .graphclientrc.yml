@@ -1,0 +1,14 @@
+sources:
+  - name: gmx
+    handler:
+      graphql:
+        endpoint: https://api.thegraph.com/subgraphs/name/nissoh/gmx-arbitrum
+        retry: 3
+        timeout: 10000
+
+plugins:
+  - pollingLive:
+      defaultInterval: 10000
+
+documents:
+  - ./src/gmx.house/queries.graphql

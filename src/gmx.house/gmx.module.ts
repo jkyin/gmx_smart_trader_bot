@@ -1,10 +1,12 @@
-import { Logger, Module } from '@nestjs/common';
-import { GMXWSController } from './gmx.controller';
-import { GMXWSService } from './gmx.service';
+import { Module } from '@nestjs/common';
+import { GMXController } from './gmx.controller';
+import { GMXService } from './gmx.service';
+import { LoggerModule } from 'src/logger/logger.module';
 
 @Module({
-  controllers: [GMXWSController],
-  providers: [GMXWSService, Logger],
-  exports: [GMXWSService],
+  imports: [LoggerModule],
+  controllers: [GMXController],
+  providers: [GMXService],
+  exports: [GMXService],
 })
-export class GMXWSModule {}
+export class GMXModule {}
