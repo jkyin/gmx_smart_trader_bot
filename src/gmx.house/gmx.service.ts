@@ -35,6 +35,7 @@ export class GMXService {
 
   async watchAccountTradeList(account: string, status: Status) {
     this.startWatch = true;
+    this._isRunning = true;
 
     const result = await this.sdk.AccountTradeList({
       account: account,
@@ -44,6 +45,7 @@ export class GMXService {
     for await (const query of result) {
       if (!this.startWatch) {
         this.logger.warn('🔴已停止');
+        this._isRunning = false;
         return;
       }
 
@@ -64,5 +66,6 @@ export class GMXService {
 
   stopWatch() {
     this.startWatch = false;
+    this._isRunning = false;
   }
 }

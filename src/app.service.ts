@@ -82,9 +82,11 @@ export class AppService {
       },
       2,
       1000,
-    ).catch((error) => {
+    ).catch(async (error) => {
       this.gmxService.stopWatch();
-      this.logger.error(`发生了错误： ${error}， ⚠️已停止监控。`);
+      const msg = `发生了错误： ${error}， 🔴已停止监控。`;
+      this.logger.error(msg);
+      await ctx.reply(msg);
     });
 
     await ctx.reply('🕓监控中...');
