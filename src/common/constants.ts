@@ -1,5 +1,4 @@
 export const POSITION_UPDATED = 'position.updated';
-export const WEBHOOK_CALLBACK = '/makemoney';
 export const GMX_DECIMALS = 30;
 
 export const TOKEN_SYMBOL: Map<string, string> = new Map([

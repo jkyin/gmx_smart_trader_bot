@@ -8,7 +8,6 @@ import { GMXModule } from './gmx.house/gmx.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Telegraf } from 'telegraf';
 import { LoggerModule } from './logger/logger.module';
-import { WEBHOOK_CALLBACK } from './common/constants';
 
 @Module({
   imports: [
@@ -22,8 +21,8 @@ import { WEBHOOK_CALLBACK } from './common/constants';
         token: `${configService.get<string>('TELEGRAM_BOT_TOKEN')}`,
         launchOptions: {
           webhook: {
-            domain: 'domain.tld',
-            hookPath: WEBHOOK_CALLBACK,
+            domain: `${configService.get<string>('WEBHOOK_DOMAIN')}`,
+            hookPath: `${configService.get<string>('WEBHOOK_PATH')}`,
           },
         },
       }),
