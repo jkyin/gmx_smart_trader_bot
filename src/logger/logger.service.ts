@@ -11,7 +11,7 @@ dayjs.locale('zh-cn');
 
 export class Logger extends ConsoleLogger {
   protected getTimestamp(): string {
-    const timestamp = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const timestamp = dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
     return timestamp;
   }
 }
