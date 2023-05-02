@@ -19,10 +19,10 @@ import { BNModule } from './binance/binance.module';
     TelegrafModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        token: `${configService.get<string>('TEST_TELEGRAM_BOT_TOKEN')}`,
+        token: `${configService.get<string>('TELEGRAM_BOT_TOKEN')}`,
         launchOptions: {
           webhook: {
-            domain: `${configService.get<string>('TEST_WEBHOOK_DOMAIN')}`,
+            domain: `${configService.get<string>('WEBHOOK_DOMAIN')}`,
             hookPath: `${configService.get<string>('WEBHOOK_PATH')}`,
           },
         },
