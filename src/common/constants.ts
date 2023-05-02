@@ -1,3 +1,6 @@
+export const POSITION_OPEN = 'position.open';
+export const POSITION_CLOSED = 'position.closed';
+export const POSITION_CLOSED_ALL = 'position.closed.all';
 export const POSITION_UPDATED = 'position.updated';
 export const GMX_DECIMALS = 30;
 

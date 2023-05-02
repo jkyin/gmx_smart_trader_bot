@@ -7,7 +7,6 @@ import 'dayjs/locale/zh-cn';
 dayjs.extend(timezone);
 dayjs.extend(utc);
 dayjs.tz.setDefault('Asia/Shanghai');
-dayjs.locale('zh-cn');
 
 export class Logger extends ConsoleLogger {
   protected getTimestamp(): string {

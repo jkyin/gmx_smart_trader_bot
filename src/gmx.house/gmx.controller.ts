@@ -5,8 +5,13 @@ import { GMXService } from './gmx.service';
 export class GMXController {
   constructor(private readonly service: GMXService) {}
 
-  @Get('currentWatching')
-  async currentWatching() {
-    return JSON.stringify(await this.service.currentWatching());
+  @Get('watchingInfo')
+  getCurrentWatching() {
+    return this.service.watchingInfo ?? {};
+  }
+
+  @Get('livePositions')
+  getLivePositions() {
+    return this.service.activeTrades ?? {};
   }
 }

@@ -2740,27 +2740,74 @@ export type AccountTradeListQueryVariables = Exact<{
 
 
 export type AccountTradeListQuery = { trades: Array<(
-    Pick<Trade, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'status' | 'sizeDelta' | 'collateralDelta' | 'fee' | 'size' | 'collateral' | 'averagePrice' | 'realisedPnl' | 'realisedPnlPercentage' | 'settledTimestamp'>
-    & { increaseList: Array<Pick<IncreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>>, decreaseList: Array<Pick<DecreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>>, updateList: Array<Pick<UpdatePosition, 'id' | 'timestamp' | 'key' | 'size' | 'markPrice' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>>, closedPosition?: Maybe<Pick<ClosePosition, 'id' | 'timestamp' | 'key' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>>, liquidatedPosition?: Maybe<Pick<LiquidatePosition, 'id' | 'timestamp' | 'key' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'markPrice'>> }
+    { __typename: 'Trade' }
+    & Pick<Trade, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'status' | 'sizeDelta' | 'collateralDelta' | 'fee' | 'size' | 'collateral' | 'averagePrice' | 'realisedPnl' | 'realisedPnlPercentage' | 'settledTimestamp'>
+    & { increaseList: Array<(
+      { __typename: 'IncreasePosition' }
+      & Pick<IncreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>
+    )>, decreaseList: Array<(
+      { __typename: 'DecreasePosition' }
+      & Pick<DecreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>
+    )>, updateList: Array<(
+      { __typename: 'UpdatePosition' }
+      & Pick<UpdatePosition, 'id' | 'timestamp' | 'key' | 'size' | 'markPrice' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>
+    )>, closedPosition?: Maybe<(
+      { __typename: 'ClosePosition' }
+      & Pick<ClosePosition, 'id' | 'timestamp' | 'key' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>
+    )>, liquidatedPosition?: Maybe<(
+      { __typename: 'LiquidatePosition' }
+      & Pick<LiquidatePosition, 'id' | 'timestamp' | 'key' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'markPrice'>
+    )> }
   )> };
 
-export type increasePositionFieldsFragment = Pick<IncreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>;
-
-export type decreasePositionFieldsFragment = Pick<DecreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>;
-
-export type updatePositionFieldsFragment = Pick<UpdatePosition, 'id' | 'timestamp' | 'key' | 'size' | 'markPrice' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>;
-
-export type closePositionFieldsFragment = Pick<ClosePosition, 'id' | 'timestamp' | 'key' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>;
-
-export type liquidatePositionFieldsFragment = Pick<LiquidatePosition, 'id' | 'timestamp' | 'key' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'markPrice'>;
-
-export type tradeFieldsFragment = (
-  Pick<Trade, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'status' | 'sizeDelta' | 'collateralDelta' | 'fee' | 'size' | 'collateral' | 'averagePrice' | 'realisedPnl' | 'realisedPnlPercentage' | 'settledTimestamp'>
-  & { increaseList: Array<Pick<IncreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>>, decreaseList: Array<Pick<DecreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>>, updateList: Array<Pick<UpdatePosition, 'id' | 'timestamp' | 'key' | 'size' | 'markPrice' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>>, closedPosition?: Maybe<Pick<ClosePosition, 'id' | 'timestamp' | 'key' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>>, liquidatedPosition?: Maybe<Pick<LiquidatePosition, 'id' | 'timestamp' | 'key' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'markPrice'>> }
+export type IncreasePositionFieldsFragment = (
+  { __typename: 'IncreasePosition' }
+  & Pick<IncreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>
 );
 
-export const increasePositionFieldsFragmentDoc = gql`
-    fragment increasePositionFields on IncreasePosition {
+export type DecreasePositionFieldsFragment = (
+  { __typename: 'DecreasePosition' }
+  & Pick<DecreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>
+);
+
+export type UpdatePositionFieldsFragment = (
+  { __typename: 'UpdatePosition' }
+  & Pick<UpdatePosition, 'id' | 'timestamp' | 'key' | 'size' | 'markPrice' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>
+);
+
+export type ClosePositionFieldsFragment = (
+  { __typename: 'ClosePosition' }
+  & Pick<ClosePosition, 'id' | 'timestamp' | 'key' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>
+);
+
+export type LiquidatePositionFieldsFragment = (
+  { __typename: 'LiquidatePosition' }
+  & Pick<LiquidatePosition, 'id' | 'timestamp' | 'key' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'markPrice'>
+);
+
+export type TradeFieldsFragment = (
+  { __typename: 'Trade' }
+  & Pick<Trade, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'status' | 'sizeDelta' | 'collateralDelta' | 'fee' | 'size' | 'collateral' | 'averagePrice' | 'realisedPnl' | 'realisedPnlPercentage' | 'settledTimestamp'>
+  & { increaseList: Array<(
+    { __typename: 'IncreasePosition' }
+    & Pick<IncreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>
+  )>, decreaseList: Array<(
+    { __typename: 'DecreasePosition' }
+    & Pick<DecreasePosition, 'id' | 'timestamp' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'key' | 'collateralDelta' | 'sizeDelta' | 'fee' | 'price'>
+  )>, updateList: Array<(
+    { __typename: 'UpdatePosition' }
+    & Pick<UpdatePosition, 'id' | 'timestamp' | 'key' | 'size' | 'markPrice' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>
+  )>, closedPosition?: Maybe<(
+    { __typename: 'ClosePosition' }
+    & Pick<ClosePosition, 'id' | 'timestamp' | 'key' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'averagePrice' | 'entryFundingRate'>
+  )>, liquidatedPosition?: Maybe<(
+    { __typename: 'LiquidatePosition' }
+    & Pick<LiquidatePosition, 'id' | 'timestamp' | 'key' | 'account' | 'collateralToken' | 'indexToken' | 'isLong' | 'size' | 'collateral' | 'reserveAmount' | 'realisedPnl' | 'markPrice'>
+  )> }
+);
+
+export const IncreasePositionFieldsFragmentDoc = gql`
+    fragment IncreasePositionFields on IncreasePosition {
   id
   timestamp
   account
@@ -2772,10 +2819,11 @@ export const increasePositionFieldsFragmentDoc = gql`
   sizeDelta
   fee
   price
+  __typename
 }
-    ` as unknown as DocumentNode<increasePositionFieldsFragment, unknown>;
-export const decreasePositionFieldsFragmentDoc = gql`
-    fragment decreasePositionFields on DecreasePosition {
+    ` as unknown as DocumentNode<IncreasePositionFieldsFragment, unknown>;
+export const DecreasePositionFieldsFragmentDoc = gql`
+    fragment DecreasePositionFields on DecreasePosition {
   id
   timestamp
   account
@@ -2787,10 +2835,11 @@ export const decreasePositionFieldsFragmentDoc = gql`
   sizeDelta
   fee
   price
+  __typename
 }
-    ` as unknown as DocumentNode<decreasePositionFieldsFragment, unknown>;
-export const updatePositionFieldsFragmentDoc = gql`
-    fragment updatePositionFields on UpdatePosition {
+    ` as unknown as DocumentNode<DecreasePositionFieldsFragment, unknown>;
+export const UpdatePositionFieldsFragmentDoc = gql`
+    fragment UpdatePositionFields on UpdatePosition {
   id
   timestamp
   key
@@ -2801,10 +2850,11 @@ export const updatePositionFieldsFragmentDoc = gql`
   realisedPnl
   averagePrice
   entryFundingRate
+  __typename
 }
-    ` as unknown as DocumentNode<updatePositionFieldsFragment, unknown>;
-export const closePositionFieldsFragmentDoc = gql`
-    fragment closePositionFields on ClosePosition {
+    ` as unknown as DocumentNode<UpdatePositionFieldsFragment, unknown>;
+export const ClosePositionFieldsFragmentDoc = gql`
+    fragment ClosePositionFields on ClosePosition {
   id
   timestamp
   key
@@ -2814,10 +2864,11 @@ export const closePositionFieldsFragmentDoc = gql`
   realisedPnl
   averagePrice
   entryFundingRate
+  __typename
 }
-    ` as unknown as DocumentNode<closePositionFieldsFragment, unknown>;
-export const liquidatePositionFieldsFragmentDoc = gql`
-    fragment liquidatePositionFields on LiquidatePosition {
+    ` as unknown as DocumentNode<ClosePositionFieldsFragment, unknown>;
+export const LiquidatePositionFieldsFragmentDoc = gql`
+    fragment LiquidatePositionFields on LiquidatePosition {
   id
   timestamp
   key
@@ -2830,10 +2881,11 @@ export const liquidatePositionFieldsFragmentDoc = gql`
   reserveAmount
   realisedPnl
   markPrice
+  __typename
 }
-    ` as unknown as DocumentNode<liquidatePositionFieldsFragment, unknown>;
-export const tradeFieldsFragmentDoc = gql`
-    fragment tradeFields on Trade {
+    ` as unknown as DocumentNode<LiquidatePositionFieldsFragment, unknown>;
+export const TradeFieldsFragmentDoc = gql`
+    fragment TradeFields on Trade {
   id
   timestamp
   account
@@ -2842,14 +2894,14 @@ export const tradeFieldsFragmentDoc = gql`
   isLong
   key
   status
-  increaseList(first: $pageSize) {
-    ...increasePositionFields
+  increaseList(first: $pageSize, orderBy: timestamp, orderDirection: desc) {
+    ...IncreasePositionFields
   }
-  decreaseList(first: $pageSize) {
-    ...decreasePositionFields
+  decreaseList(first: $pageSize, orderBy: timestamp, orderDirection: desc) {
+    ...DecreasePositionFields
   }
-  updateList(first: $pageSize) {
-    ...updatePositionFields
+  updateList(first: $pageSize, orderBy: timestamp, orderDirection: desc) {
+    ...UpdatePositionFields
   }
   sizeDelta
   collateralDelta
@@ -2861,24 +2913,25 @@ export const tradeFieldsFragmentDoc = gql`
   realisedPnlPercentage
   settledTimestamp
   closedPosition {
-    ...closePositionFields
+    ...ClosePositionFields
   }
   liquidatedPosition {
-    ...liquidatePositionFields
+    ...LiquidatePositionFields
   }
+  __typename
 }
-    ${increasePositionFieldsFragmentDoc}
-${decreasePositionFieldsFragmentDoc}
-${updatePositionFieldsFragmentDoc}
-${closePositionFieldsFragmentDoc}
-${liquidatePositionFieldsFragmentDoc}` as unknown as DocumentNode<tradeFieldsFragment, unknown>;
+    ${IncreasePositionFieldsFragmentDoc}
+${DecreasePositionFieldsFragmentDoc}
+${UpdatePositionFieldsFragmentDoc}
+${ClosePositionFieldsFragmentDoc}
+${LiquidatePositionFieldsFragmentDoc}` as unknown as DocumentNode<TradeFieldsFragment, unknown>;
 export const AccountTradeListDocument = gql`
     query AccountTradeList($pageSize: Int = 10, $account: String, $status: Status) @live {
   trades(first: $pageSize, skip: 0, where: {account: $account, status: $status}) {
-    ...tradeFields
+    ...TradeFields
   }
 }
-    ${tradeFieldsFragmentDoc}` as unknown as DocumentNode<AccountTradeListQuery, AccountTradeListQueryVariables>;
+    ${TradeFieldsFragmentDoc}` as unknown as DocumentNode<AccountTradeListQuery, AccountTradeListQueryVariables>;
 
 
 export type Requester<C = {}, E = unknown> = <R, V>(doc: DocumentNode, vars?: V, options?: C) => Promise<R> | AsyncIterable<R>

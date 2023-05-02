@@ -4,12 +4,12 @@ query AccountTradeList($pageSize: Int = 10, $account: String, $status: Status) @
       skip: 0
       where: { account: $account, status: $status }
     ) {
-      ...tradeFields
+      ...TradeFields
     }
   }
 
 
-fragment increasePositionFields on IncreasePosition {
+fragment IncreasePositionFields on IncreasePosition {
   id
   timestamp
   account
@@ -21,9 +21,10 @@ fragment increasePositionFields on IncreasePosition {
   sizeDelta
   fee
   price
+  __typename
 }
 
-fragment decreasePositionFields on DecreasePosition {
+fragment DecreasePositionFields on DecreasePosition {
   id
   timestamp
   account
@@ -35,9 +36,10 @@ fragment decreasePositionFields on DecreasePosition {
   sizeDelta
   fee
   price
+  __typename
 }
 
-fragment updatePositionFields on UpdatePosition {
+fragment UpdatePositionFields on UpdatePosition {
   id
   timestamp
   key
@@ -48,9 +50,10 @@ fragment updatePositionFields on UpdatePosition {
   realisedPnl
   averagePrice
   entryFundingRate
+  __typename
 }
 
-fragment closePositionFields on ClosePosition {
+fragment ClosePositionFields on ClosePosition {
   id
   timestamp
   key
@@ -60,9 +63,10 @@ fragment closePositionFields on ClosePosition {
   realisedPnl
   averagePrice
   entryFundingRate
+  __typename
 }
 
-fragment liquidatePositionFields on LiquidatePosition {
+fragment LiquidatePositionFields on LiquidatePosition {
   id
   timestamp
   key
@@ -75,9 +79,10 @@ fragment liquidatePositionFields on LiquidatePosition {
   reserveAmount
   realisedPnl
   markPrice
+  __typename
 }
 
-fragment tradeFields on Trade {
+fragment TradeFields on Trade {
   id
   timestamp
   account
@@ -87,9 +92,9 @@ fragment tradeFields on Trade {
   key
   status
 
-  increaseList(first: $pageSize) { ...increasePositionFields }
-  decreaseList(first: $pageSize) { ...decreasePositionFields }
-  updateList(first: $pageSize) { ...updatePositionFields }
+  increaseList(first: $pageSize orderBy:timestamp orderDirection: desc) { ...IncreasePositionFields }
+  decreaseList(first: $pageSize orderBy:timestamp orderDirection: desc) { ...DecreasePositionFields }
+  updateList(first: $pageSize orderBy:timestamp orderDirection: desc) { ...UpdatePositionFields }
 
   sizeDelta
   collateralDelta
@@ -101,7 +106,7 @@ fragment tradeFields on Trade {
   realisedPnl
   realisedPnlPercentage
   settledTimestamp
-  closedPosition { ...closePositionFields }
-  liquidatedPosition { ...liquidatePositionFields }
-  
+  closedPosition { ...ClosePositionFields }
+  liquidatedPosition { ...LiquidatePositionFields }
+  __typename
 }

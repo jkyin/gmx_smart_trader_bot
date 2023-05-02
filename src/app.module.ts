@@ -8,6 +8,7 @@ import { GMXModule } from './gmx.house/gmx.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Telegraf } from 'telegraf';
 import { LoggerModule } from './logger/logger.module';
+import { BNModule } from './binance/binance.module';
 
 @Module({
   imports: [
@@ -18,10 +19,10 @@ import { LoggerModule } from './logger/logger.module';
     TelegrafModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        token: `${configService.get<string>('TELEGRAM_BOT_TOKEN')}`,
+        token: `${configService.get<string>('TEST_TELEGRAM_BOT_TOKEN')}`,
         launchOptions: {
           webhook: {
-            domain: `${configService.get<string>('WEBHOOK_DOMAIN')}`,
+            domain: `${configService.get<string>('TEST_WEBHOOK_DOMAIN')}`,
             hookPath: `${configService.get<string>('WEBHOOK_PATH')}`,
           },
         },
@@ -29,6 +30,7 @@ import { LoggerModule } from './logger/logger.module';
       inject: [ConfigService],
     }),
     GMXModule,
+    BNModule,
   ],
   controllers: [AppController],
   providers: [AppService, Telegraf],
