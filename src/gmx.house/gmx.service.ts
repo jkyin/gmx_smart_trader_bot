@@ -58,16 +58,14 @@ export class GMXService {
         return;
       }
 
-      if (_.isEqual(this._activeTrades, query.trades)) {
-        return;
-      }
+      if (_.isEqual(this._activeTrades, query.trades) == false) {
+        this._activeTrades = query.trades;
 
-      this._activeTrades = query.trades;
-
-      if (query.trades.length == 0 && this.cexTradeList.length > 0) {
-        this.closeAllTrade();
-      } else {
-        query.trades.forEach((trade) => this.diffTrade(trade));
+        if (query.trades.length == 0 && this.cexTradeList.length > 0) {
+          this.closeAllTrade();
+        } else {
+          query.trades.forEach((trade) => this.diffTrade(trade));
+        }
       }
     }
   }
