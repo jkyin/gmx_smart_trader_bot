@@ -78,9 +78,11 @@ export class GMXService {
   private diffTrade(trade: ITrade) {
     const symbol = TOKEN_SYMBOL.get(trade.indexToken);
     if (!symbol) {
+      this.logger.warn(`参数异常， 没有 symbol，当前 trade 为 ${trade}`);
       return;
     }
 
+    const pair = symbol + 'USDT';
     const cexTrade = _.find(this.cexTradeList, { symbol: symbol });
     const actionList = getOrderedActionList(trade);
 
@@ -91,11 +93,17 @@ export class GMXService {
     if (isTradeOpen(trade)) {
       const action = _.head(actionList);
 
-      if (cexTrade || action === undefined) {
+      if (cexTrade) {
+        this.logger.warn(`特殊情况， binance 已包含已包含 ${pair} 仓位.`);
         return;
       }
 
-      const newTrade = { symbol: symbol, openTimestamp: trade.timestamp, actions: actionList, pair: symbol + 'USDT' };
+      if (!action) {
+        this.logger.warn('异常情况，应该有 action，但是没有。');
+        return;
+      }
+
+      const newTrade = { symbol: symbol, openTimestamp: trade.timestamp, actions: actionList, pair: pair };
       const event: TradeEvent = {
         trade: newTrade,
         updateAction: action,
@@ -106,12 +114,18 @@ export class GMXService {
 
       this.cexTradeList.push(newTrade);
     } else if (isTradeClosed(trade)) {
-      if (!cexTrade || trade.closedPosition == undefined) {
+      if (!trade.closedPosition) {
+        this.logger.warn('异常情况，应该有 closedPosition.');
         return;
       }
 
       const event: TradeEvent = {
-        trade: cexTrade,
+        trade: {
+          openTimestamp: trade.timestamp,
+          symbol: symbol,
+          pair: pair,
+          actions: [],
+        },
         closeAction: trade.closedPosition,
         raw: trade,
       };
@@ -121,14 +135,17 @@ export class GMXService {
       _.remove(this.cexTradeList, { symbol: symbol });
     } else {
       if (!cexTrade) {
+        this.logger.warn('监控到被观察 trader 仓位存在， 但服务器没有记录，请手动酌情开启自己的仓位。');
         return;
       }
+
       // 调仓
       const lastActionList = cexTrade?.actions;
       const changes = _.differenceBy(lastActionList, actionList, 'id');
       const action = _.head(changes);
 
       if (!action) {
+        this.logger.warn('异常情况，应该有 changes，但没识别到');
         return;
       }
 
