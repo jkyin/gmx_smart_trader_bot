@@ -16,8 +16,8 @@ import * as timezone from 'dayjs/plugin/timezone';
 import * as utc from 'dayjs/plugin/utc';
 import 'dayjs/locale/zh-cn';
 
-dayjs.extend(timezone);
 dayjs.extend(utc);
+dayjs.extend(timezone);
 dayjs.tz.setDefault('Asia/Shanghai');
 dayjs.extend(relativeTime);
 
