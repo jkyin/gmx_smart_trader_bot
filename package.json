@@ -34,6 +34,7 @@
     "currency.js": "^2.0.4",
     "dayjs": "^1.11.7",
     "lodash": "^4.17.21",
+    "moment-timezone": "^0.5.43",
     "nestjs-telegraf": "^2.6.3",
     "reflect-metadata": "^0.1.13",
     "telegraf": "^4.12.2"
