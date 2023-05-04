@@ -12,14 +12,8 @@ dayjs.extend(customParseFormat);
 
 export class Logger extends ConsoleLogger {
   protected getTimestamp(): string {
-    // console.log(dayjs());
-    // console.log(dayjs().tz('Asia/Shanghai'));
-    console.log(dayjs().format('YYYY-MM-DD HH:mm:ss'));
-    const date = dayjs();
-    const result = date.tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
-    console.log(result);
     
-    const timestamp = dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
+    const timestamp = dayjs().tz('America/New_York').format('YYYY-MM-DD HH:mm:ss');
     return timestamp;
   }
 }
