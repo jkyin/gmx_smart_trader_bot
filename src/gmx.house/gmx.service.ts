@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DecreasePosition, IncreasePosition, Status, Trade, getBuiltGraphSDK } from '../../.graphclient';
+import { Status, Trade, getBuiltGraphSDK } from '../../.graphclient';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as _ from 'lodash';

@@ -140,7 +140,7 @@ export class AppService {
     const pair = event.trade.pair;
     const action = event.updateAction;
 
-    this.logger.debug('收到 ${symbol} 调仓信号');
+    this.logger.debug(`收到 ${symbol} 调仓信号`);
 
     if (!action) {
       this.logger.error('需要有 event.updateAction, 但是没有值。');
