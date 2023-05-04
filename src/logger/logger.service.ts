@@ -10,7 +10,7 @@ dayjs.tz.setDefault('Asia/Shanghai');
 
 export class Logger extends ConsoleLogger {
   protected getTimestamp(): string {
-    const timestamp = dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
+    const timestamp = dayjs.tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
     return timestamp;
   }
 }

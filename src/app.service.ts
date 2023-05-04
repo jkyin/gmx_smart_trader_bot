@@ -41,6 +41,7 @@ export class AppService {
 
   @Help()
   async helpCommand(ctx: Context) {
+    this.logger.debug('helpCommand');
     await ctx.reply('Tell me.');
   }
 
