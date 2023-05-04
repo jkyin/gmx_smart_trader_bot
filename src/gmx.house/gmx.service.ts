@@ -58,6 +58,10 @@ export class GMXService {
         return;
       }
 
+      if (_.isEqual(this._activeTrades, query.trades)) {
+        return;
+      }
+
       this._activeTrades = query.trades;
 
       if (query.trades.length == 0 && this.cexTradeList.length > 0) {
@@ -145,7 +149,6 @@ export class GMXService {
       const action = _.head(changes);
 
       if (!action) {
-        this.logger.warn('异常情况，应该有 changes，但没识别到');
         return;
       }
 
