@@ -6,9 +6,8 @@ import * as customParseFormat from 'dayjs/plugin/customParseFormat';
 
 import 'dayjs/locale/zh-cn';
 
-dayjs.extend(timezone);
 dayjs.extend(utc);
-dayjs.tz.setDefault('Asia/Shanghai');
+dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 
 export class Logger extends ConsoleLogger {
@@ -16,8 +15,11 @@ export class Logger extends ConsoleLogger {
     // console.log(dayjs());
     // console.log(dayjs().tz('Asia/Shanghai'));
     console.log(dayjs().format('YYYY-MM-DD HH:mm:ss'));
-
-    const timestamp = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const date = dayjs();
+    const result = date.tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
+    console.log(result);
+    
+    const timestamp = dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
     return timestamp;
   }
 }
