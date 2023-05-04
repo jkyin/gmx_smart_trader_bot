@@ -1,4 +1,4 @@
-// Symbol of Interest.
-const SOI = ['BTCUSDT', 'ETHUSDT'];
+// Pair of Interest.
+const PAIR_OF_INTEREST = ['BTCUSDT', 'ETHUSDT'];
 
-export { SOI };
+export { PAIR_OF_INTEREST };

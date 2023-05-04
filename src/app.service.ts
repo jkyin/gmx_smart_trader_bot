@@ -8,18 +8,9 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { TOKEN_SYMBOL, POSITION_UPDATED, GMX_DECIMALS, POSITION_OPEN, POSITION_CLOSED, POSITION_CLOSED_ALL } from './common/constants';
 import { TradeEvent, TGBotPositionDisplayInfo, ITrade } from './interfaces/gmx.interface';
 import { Logger } from './logger/logger.service';
-import * as dayjs from 'dayjs';
-import * as relativeTime from 'dayjs/plugin/relativeTime';
 import BigNumber from 'bignumber.js';
 import { BNService } from './binance/binance-usdm-trade.service';
-import * as timezone from 'dayjs/plugin/timezone';
-import * as utc from 'dayjs/plugin/utc';
-import 'dayjs/locale/zh-cn';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.tz.setDefault('Asia/Shanghai');
-dayjs.extend(relativeTime);
+import * as moment from 'moment-timezone';
 
 @Update()
 @Injectable()
@@ -41,7 +32,6 @@ export class AppService {
 
   @Help()
   async helpCommand(ctx: Context) {
-    this.logger.debug('helpCommand');
     await ctx.reply('Tell me.');
   }
 
@@ -55,8 +45,8 @@ export class AppService {
   @Hears('test1')
   hearsTest1(ctx: Context) {
     this.bnService
-      .getFuturesPositions()
-      .then((value) => this.logger.debug(JSON.stringify(value)))
+      .getActiveFuturesPositions()
+      .then((value) => this.logger.debug(value))
       .catch((error) => this.logger.error(`getFuturesPositions: ${error}`));
   }
 
@@ -64,7 +54,7 @@ export class AppService {
   async hearsTestSellAll() {
     const result = await this.bnService.closePosition('ETHUSDT');
 
-    this.logger.debug(JSON.stringify(result));
+    this.logger.debug(result);
   }
 
   @Command('status')
@@ -125,7 +115,7 @@ export class AppService {
     `;
 
     const output = formatLeftAlign(reply);
-    // console.log(JSON.stringify(reply));
+    // console.log(reply);
 
     try {
       if (this.chatId) {
@@ -144,13 +134,13 @@ export class AppService {
 
   @OnEvent(POSITION_UPDATED)
   async handlePositionUpdatedEvent(event: TradeEvent) {
-    this.logger.log('收到调仓信号');
-
     const rawTrade = event.raw;
     const account = rawTrade.account;
     const symbol = event.trade.symbol;
     const pair = event.trade.pair;
     const action = event.updateAction;
+
+    this.logger.debug('收到 ${symbol} 调仓信号');
 
     if (!action) {
       this.logger.error('需要有 event.updateAction, 但是没有值。');
@@ -194,11 +184,11 @@ export class AppService {
     `;
 
     const output = formatLeftAlign(reply);
-    // console.log(JSON.stringify(reply));
+    // console.log(reply);
 
     try {
       const leverage = this.bnService.allPositions.filter((p) => p.symbol === pair)[0].leverage;
-      const quantity = this.bnService.getQualityFrom(BigNumber(100), BigNumber(leverage), bnMarketPrice);
+      const quantity = this.bnService.getQualityFrom(BigNumber(150), BigNumber(leverage), bnMarketPrice);
       const result = await this.bnService.openPosition(pair, quantity.toNumber(), isLong);
       this.logger.debug(result);
 
@@ -218,7 +208,6 @@ export class AppService {
 
   @OnEvent(POSITION_OPEN)
   async handlePositionOpenEvent(event: TradeEvent) {
-    this.logger.log('收到开仓信号');
     const rawTrade = event.raw;
     const account = rawTrade.account;
     const symbol = event.trade.symbol;
@@ -229,8 +218,9 @@ export class AppService {
     const collateral = BigNumber(rawTrade.collateral).div(factory);
     const size = BigNumber(rawTrade.size).div(factory);
     const leverage = size.div(collateral);
-
     const position = this.displayInfo(rawTrade);
+
+    this.logger.debug(`收到 ${symbol} 开仓信号`);
 
     const positionInfoFormatted = `
     🏦*当前 ${position.token} 仓位* 🏦
@@ -259,14 +249,15 @@ export class AppService {
     `;
 
     const output = formatLeftAlign(reply);
-    // console.log(JSON.stringify(reply));
+    // console.log(reply);
 
     try {
       const leverageRound = leverage.plus(2).integerValue(BigNumber.ROUND_CEIL);
       const quantity = this.bnService.getQualityFrom(BigNumber(100), leverageRound, bnMarketPrice);
+      const activePosition = await this.bnService.getActiveFuturePositionInfo(pair);
 
-      if (await this.bnService.didOpenPosition(symbol)) {
-        this.logger.debug(`已有${symbol}仓位，跳过开仓。`);
+      if (activePosition) {
+        this.logger.debug(`已有 ${pair} 仓位，跳过开仓。仓位信息： ${activePosition}`);
       } else {
         const result = await this.bnService.setLeverage(pair, leverageRound.toNumber());
         this.logger.debug(result);
@@ -290,15 +281,15 @@ export class AppService {
 
   @OnEvent(POSITION_CLOSED)
   async handlePositionClosedEvent(event: TradeEvent) {
-    this.logger.log('收到平仓信号');
     const pair = event.trade.pair;
+    this.logger.log(`收到 ${pair} 平仓信号`);
     const result = await this.bnService.closePosition(pair);
     this.logger.debug(`已平仓 ${result}`);
   }
 
   @OnEvent(POSITION_CLOSED_ALL)
   async handlePositionClosedAllEvent(event: TradeEvent) {
-    this.logger.log('收到全部信号');
+    this.logger.log('收到全部平仓信号');
     const result = await this.bnService.closeAllPosition();
     this.logger.debug(`已全部平仓 ${result}`);
   }
@@ -314,8 +305,9 @@ export class AppService {
     const leverage = size.div(collateral);
 
     // 可读文本
-    const relativeTimeDisplay = dayjs.unix(trade.timestamp).fromNow();
-    const timestampDisplay = dayjs.unix(timestamp).format('YYYY-MM-DD HH:mm:ss');
+
+    const relativeTimeDisplay = moment(trade.timestamp).locale('zh-cn').fromNow();
+    const timestampDisplay = moment(timestamp).tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
     const tokenDisplay = token ?? '??';
     const isLongDisplay = trade.isLong ? 'Long (做多)' : 'Short (做空)';
     const entryPriceDisplay = formatCurrency(entryPrice);

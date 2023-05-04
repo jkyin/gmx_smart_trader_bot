@@ -31,12 +31,12 @@ dependencies:
   currency.js:
     specifier: ^2.0.4
     version: 2.0.4
-  dayjs:
-    specifier: ^1.11.7
-    version: 1.11.7
   lodash:
     specifier: ^4.17.21
     version: 4.17.21
+  moment:
+    specifier: ^2.29.4
+    version: 2.29.4
   moment-timezone:
     specifier: ^0.5.43
     version: 0.5.43
@@ -5337,6 +5337,7 @@ packages:
 
   /dayjs@1.11.7:
     resolution: {integrity: sha512-+Yw9U6YO5TQohxLcIkrXBeY73WP3ejHWVvx8XCk3gxvQDCTEmS48ZrSZCKciI7Bhl/uCMyxYtE9UqRILmFphkQ==}
+    dev: true
 
   /debug@2.6.9:
     resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}

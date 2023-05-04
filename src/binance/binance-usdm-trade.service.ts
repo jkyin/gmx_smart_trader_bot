@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { USDMClient, FuturesPosition, NewFuturesOrderParams, SetLeverageParams, SymbolPrice } from 'binance';
-import { SOI } from './binance.constants';
+import { PAIR_OF_INTEREST } from './binance.constants';
 import { Logger } from 'src/logger/logger.service';
 import BigNumber from 'bignumber.js';
 import { Cron } from '@nestjs/schedule';
+import * as _ from 'lodash';
 
 @Injectable()
 export class BNService {
@@ -36,7 +37,7 @@ export class BNService {
 
   @Cron('* * * * * *')
   private async getPairsMarketPrice() {
-    const prices = SOI.map((pair) => {
+    const prices = PAIR_OF_INTEREST.map((pair) => {
       return this.usdmClient.getSymbolPriceTicker({
         symbol: pair,
       }) as Promise<SymbolPrice>;
@@ -58,38 +59,42 @@ export class BNService {
     return usdt.multipliedBy(leverage).dividedBy(entryPrice);
   }
 
-  async didOpenPosition(symbol: string) {
-    const positions = await this.getFuturesPositions();
-    const result = positions.filter((p) => p.symbol.includes(symbol));
-    return result.length > 0;
+  getUSDTPairOfInterestFromSymbol(symbol: string) {
+    return PAIR_OF_INTEREST.filter((p) => p.includes(symbol));
   }
 
-  async getFuturesPositions() {
+  async getActiveFuturePositionInfo(pair: string) {
+    const positions = await this.getActiveFuturesPositions();
+    const result = _.head(positions.filter((p) => p.symbol === pair));
+    return result;
+  }
+
+  async getActiveFuturesPositions() {
     const list = await this.usdmClient.getPositions();
-    const result = list.filter((p) => SOI.includes(p.symbol));
+    const result = list.filter((p) => PAIR_OF_INTEREST.includes(p.symbol) && p.positionAmt != 0);
     this._allPositions = result;
     return result;
   }
 
-  async setLeverage(symbol: string, leverage: number) {
+  async setLeverage(pair: string, leverage: number) {
     const params: SetLeverageParams = {
-      symbol: symbol,
+      symbol: pair,
       leverage: leverage,
     };
     return await this.usdmClient.setLeverage(params);
   }
 
-  async openPosition(symbol: string, quantity: number, isLong: boolean) {
-    return this.increasePosition(symbol, quantity, isLong);
+  async openPosition(pair: string, quantity: number, isLong: boolean) {
+    return this.increasePosition(pair, quantity, isLong);
   }
 
-  async increasePosition(symbol: string, quantity: number, isLong: boolean) {
-    if (symbol.length == 0) {
-      return new Error(`参数错误： 没有 symbol ${symbol}`);
+  async increasePosition(pair: string, quantity: number, isLong: boolean) {
+    if (pair.length == 0) {
+      return new Error(`参数错误： 没有 pair ${pair}`);
     }
 
     const params: NewFuturesOrderParams = {
-      symbol: symbol,
+      symbol: pair,
       side: isLong ? 'BUY' : 'SELL',
       quantity: Math.abs(quantity),
       type: 'MARKET',
@@ -101,20 +106,20 @@ export class BNService {
     return result;
   }
 
-  async decreasePosition(symbol: string, quantity: number, isLong: boolean) {
-    if (symbol.length == 0) {
-      return new Error(`参数错误： 没有 symbol ${symbol}`);
+  async decreasePosition(pair: string, quantity: number, isLong: boolean) {
+    if (pair.length == 0) {
+      return new Error(`参数错误： 没有 pair ${pair}`);
     }
 
-    const position = (await this.getFuturesPositions()).filter((p) => p.symbol === symbol)[0];
+    const position = await this.getActiveFuturePositionInfo(pair);
 
     if (!position) {
-      this.logger.debug(`没有 ${symbol} 仓位，跳过。`);
+      this.logger.debug(`没有 ${pair} 仓位，跳过。`);
       return;
     }
 
     const params: NewFuturesOrderParams = {
-      symbol: symbol,
+      symbol: pair,
       side: isLong ? 'SELL' : 'BUY',
       quantity: Math.abs(quantity),
       type: 'MARKET',
@@ -126,15 +131,15 @@ export class BNService {
     return result;
   }
 
-  async closePosition(symbol: string) {
-    if (symbol.length == 0) {
-      return new Error(`参数错误： 没有 symbol ${symbol}`);
+  async closePosition(pair: string) {
+    if (pair.length == 0) {
+      return new Error(`参数错误： 没有 pair ${pair}`);
     }
 
-    const position = (await this.getFuturesPositions()).filter((p) => p.symbol === symbol)[0];
+    const position = await this.getActiveFuturePositionInfo(pair);
 
     if (!position) {
-      this.logger.debug(`${symbol} 仓位已平仓，跳过。`);
+      this.logger.debug(`${pair} 仓位已平仓，跳过。`);
       return;
     }
 
@@ -149,10 +154,10 @@ export class BNService {
   }
 
   async closeAllPosition() {
-    const positions = (await this.getFuturesPositions()).filter((p) => p.positionAmt != 0);
+    const positions = await this.getActiveFuturesPositions();
 
     if (positions.length == 0) {
-      this.logger.debug(`仓位已全部平仓，跳过。`);
+      this.logger.debug(`没有仓位，跳过。`);
       return;
     }
 
