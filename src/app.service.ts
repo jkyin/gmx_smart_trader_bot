@@ -47,7 +47,7 @@ export class AppService {
     this.bnService
       .getActiveFuturesPositions()
       .then((value) => this.logger.debug(value))
-      .catch((error) => this.logger.error(`getFuturesPositions: ${error}`));
+      .catch((error) => this.logger.error(`getFuturesPositions: ${JSON.stringify(error)}`));
   }
 
   @Hears('testSellETH')
@@ -77,7 +77,7 @@ export class AppService {
       1000,
     ).catch(async (error) => {
       this.gmxService.stopWatch();
-      const msg = `发生了错误： ${error}， 🔴已停止监控。`;
+      const msg = `发生了错误： ${JSON.stringify(error)}， 🔴已停止监控。`;
       this.logger.error(msg);
       await ctx.reply(msg);
     });
@@ -140,7 +140,7 @@ export class AppService {
     const pair = event.trade.pair;
     const action = event.updateAction;
 
-    this.logger.debug(`收到 ${symbol} 调仓信号`);
+    this.logger.log(`收到 ${symbol} 调仓信号`);
 
     if (!action) {
       this.logger.error('需要有 event.updateAction, 但是没有值。');
@@ -220,7 +220,7 @@ export class AppService {
     const leverage = size.div(collateral);
     const position = this.displayInfo(rawTrade);
 
-    this.logger.debug(`收到 ${symbol} 开仓信号`);
+    this.logger.log(`收到 ${symbol} 开仓信号`);
 
     const positionInfoFormatted = `
     🏦*当前 ${position.token} 仓位* 🏦
@@ -249,7 +249,6 @@ export class AppService {
     `;
 
     const output = formatLeftAlign(reply);
-    // console.log(reply);
 
     try {
       const leverageRound = leverage.plus(2).integerValue(BigNumber.ROUND_CEIL);
@@ -257,7 +256,7 @@ export class AppService {
       const activePosition = await this.bnService.getActiveFuturePositionInfo(pair);
 
       if (activePosition) {
-        this.logger.debug(`已有 ${pair} 仓位，跳过开仓。仓位信息： ${activePosition}`);
+        this.logger.debug(`已有 ${pair} 仓位，跳过开仓。仓位信息： ${JSON.stringify(activePosition)}`);
       } else {
         const result = await this.bnService.setLeverage(pair, leverageRound.toNumber());
         this.logger.debug(result);
@@ -284,14 +283,18 @@ export class AppService {
     const pair = event.trade.pair;
     this.logger.log(`收到 ${pair} 平仓信号`);
     const result = await this.bnService.closePosition(pair);
-    this.logger.debug(`已平仓 ${result}`);
+    this.logger.debug(`已平仓 ${JSON.stringify(result)}`);
+
+    await this.replyWithMarkdown(`已平仓 ${pair}`);
   }
 
   @OnEvent(POSITION_CLOSED_ALL)
   async handlePositionClosedAllEvent(event: TradeEvent) {
     this.logger.log('收到全部平仓信号');
     const result = await this.bnService.closeAllPosition();
-    this.logger.debug(`已全部平仓 ${result}`);
+    this.logger.debug(`已全部平仓 ${JSON.stringify(result)}`);
+
+    await this.replyWithMarkdown('已全部平仓');
   }
 
   private displayInfo(trade: ITrade): TGBotPositionDisplayInfo {
@@ -327,5 +330,22 @@ export class AppService {
       pnl: '',
       liquidationPrice: '',
     };
+  }
+
+  async replyWithMarkdown(text: string) {
+    const output = formatLeftAlign(text);
+    try {
+      if (this.chatId) {
+        await this.bot.telegram.sendMessage(this.chatId, output, {
+          parse_mode: 'MarkdownV2',
+          disable_web_page_preview: true,
+        });
+      }
+    } catch (error) {
+      this.logger.error(error);
+      if (this.chatId) {
+        await this.bot.telegram.sendMessage(this.chatId, error);
+      }
+    }
   }
 }

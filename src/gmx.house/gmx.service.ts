@@ -80,7 +80,7 @@ export class GMXService {
   private diffTrade(trade: ITrade) {
     const symbol = TOKEN_SYMBOL.get(trade.indexToken);
     if (!symbol) {
-      this.logger.warn(`参数异常， 没有 symbol，当前 trade 为 ${trade}`);
+      this.logger.warn(`参数异常， 没有 symbol，当前 trade 为 ${JSON.stringify(trade)}`);
       return;
     }
 

@@ -61,7 +61,7 @@ export async function retry<T>(fn: () => Promise<T>, retryCount: number, delay: 
     return result;
   } catch (error) {
     if (retryCount <= 0) {
-      throw new Error(`All retries failed: ${error}`);
+      throw new Error(`All retries failed: ${JSON.stringify(error)}`);
     }
 
     console.log(`Retry in ${delay}ms, ${retryCount} attempts left`);

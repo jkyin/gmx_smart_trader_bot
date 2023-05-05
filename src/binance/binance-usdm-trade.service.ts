@@ -100,7 +100,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.debug(`加/开仓： ${params}`);
+    this.logger.debug(`加/开仓： ${JSON.stringify(params)}`);
 
     const result = await this.usdmClient.submitNewOrder(params);
     return result;
@@ -125,7 +125,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.debug(`减仓： ${params}`);
+    this.logger.debug(`减仓： ${JSON.stringify(params)}`);
 
     const result = await this.usdmClient.submitNewOrder(params);
     return result;
