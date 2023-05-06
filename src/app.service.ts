@@ -66,7 +66,7 @@ export class AppService {
   @Command('start_watch')
   async handleStartWatch(ctx: Context) {
     this.chatId = ctx.chat?.id;
-    const account = '0x7b7736a2c07c4332ffad45a039d2117ae15e3f66';
+    const account = '0x48202A51c0d5d81b3ebeD55016408a0E0a0afaaE';
     const positionStatus = 'open';
 
     retry(
@@ -285,7 +285,7 @@ export class AppService {
     const result = await this.bnService.closePosition(pair);
     this.logger.debug(`已平仓 ${JSON.stringify(result)}`);
 
-    await this.replyWithMarkdown(`已平仓 ${pair}`);
+    await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
   }
 
   @OnEvent(POSITION_CLOSED_ALL)
@@ -294,13 +294,13 @@ export class AppService {
     const result = await this.bnService.closeAllPosition();
     this.logger.debug(`已全部平仓 ${JSON.stringify(result)}`);
 
-    await this.replyWithMarkdown('已全部平仓');
+    await this.replyWithMarkdown('🏦已全部平仓🏦');
   }
 
   private displayInfo(trade: ITrade): TGBotPositionDisplayInfo {
     const factory = 10 ** GMX_DECIMALS;
 
-    const timestamp = trade.timestamp;
+    const timestamp = trade.timestamp * 1000;
     const token = TOKEN_SYMBOL.get(trade.indexToken.toLowerCase());
     const collateral = BigNumber(trade.collateral).div(factory);
     const size = BigNumber(trade.size).div(factory);

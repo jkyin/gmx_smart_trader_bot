@@ -73,8 +73,8 @@ export class GMXService {
   // 所有仓位平仓
   closeAllTrade() {
     this.eventEmitter.emit(POSITION_CLOSED_ALL);
-
     this.cexTradeList = [];
+    this.logger.log('发出 POSITION_CLOSED_ALL 事件');
   }
 
   private diffTrade(trade: ITrade) {
@@ -89,6 +89,9 @@ export class GMXService {
     const actionList = getOrderedActionList(trade);
 
     if (!actionList) {
+      if (trade.updateList.length > 0) {
+        this.logger.warn(`actionList 不应该为空，当前 trade 数据为: ${JSON.stringify(trade)}`);
+      }
       return;
     }
 
@@ -113,6 +116,7 @@ export class GMXService {
       };
 
       this.eventEmitter.emit(POSITION_OPEN, event);
+      this.logger.log('发出 POSITION_OPEN 事件');
 
       this.cexTradeList.push(newTrade);
     } else if (isTradeClosed(trade)) {
@@ -147,6 +151,7 @@ export class GMXService {
       const action = _.head(changes);
 
       if (!action) {
+        this.logger.warn('监控到被观察 trader 仓位存在， 但服务器没有记录，请手动酌情开启自己的仓位。');
         return;
       }
 
@@ -157,6 +162,7 @@ export class GMXService {
       };
 
       this.eventEmitter.emit(POSITION_UPDATED, event);
+      this.logger.log('发出 POSITION_UPDATED 事件');
 
       const index = this.cexTradeList.indexOf(cexTrade);
       this.cexTradeList[index].actions = actionList;
