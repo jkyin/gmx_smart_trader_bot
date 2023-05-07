@@ -39,7 +39,8 @@ export class AppService {
   async hearsTest(ctx: Context) {
     const reply = markdownV2Example;
     const currency = escapeTgSpecialChars(formatCurrency(BigNumber(12345)));
-    await ctx.replyWithMarkdownV2(formatLeftAlign(reply + currency));
+    const append1 = '\n加仓 $239,352\n\n';
+    await ctx.replyWithMarkdownV2(formatLeftAlign(reply + currency + append1), { disable_web_page_preview: true });
   }
 
   @Hears('test1')
@@ -65,8 +66,12 @@ export class AppService {
 
   @Command('start_watch')
   async handleStartWatch(ctx: Context) {
+    if (this.gmxService.isWatching) {
+      return;
+    }
+
     this.chatId = ctx.chat?.id;
-    const account = '0x48202A51c0d5d81b3ebeD55016408a0E0a0afaaE';
+    const account = '0x7b7736a2c07c4332ffad45a039d2117ae15e3f66';
     const positionStatus = 'open';
 
     retry(
@@ -83,12 +88,14 @@ export class AppService {
     });
 
     await ctx.reply('🕓监控中...');
+    this.logger.log('🕓监控中...');
   }
 
   @Command('stop_watch')
   async handleStopWatch(ctx: Context) {
     this.gmxService.stopWatch();
     await ctx.reply('✅已停止监控');
+    this.logger.log('✅已停止监控');
   }
 
   @Command('opened_positions')
@@ -153,7 +160,7 @@ export class AppService {
     const factory = 10 ** GMX_DECIMALS;
 
     const collateralDelta = BigNumber(action.collateralDelta).div(factory);
-    const updateInfo = isIncreaseAction ? `加仓 ${formatCurrency(collateralDelta)}` : `减仓 ${formatCurrency(collateralDelta)}`;
+    const updateInfo = isIncreaseAction ? `已加仓 ${formatCurrency(collateralDelta)}` : `已减仓 ${formatCurrency(collateralDelta)}`;
     const position = this.displayInfo(rawTrade);
 
     const positionInfoFormatted = `
@@ -184,24 +191,35 @@ export class AppService {
     `;
 
     const output = formatLeftAlign(reply);
-    // console.log(reply);
 
     try {
-      const leverage = this.bnService.allPositions.filter((p) => p.symbol === pair)[0].leverage;
+      const leverage = (await this.bnService.getActiveFuturePositionInfo(pair))?.leverage;
+      if (!leverage) {
+        this.logger.warn(`想要调仓，但是 bnService.getActiveFuturePositionInfo(${pair}))?.leverage 结果为 ${leverage}`);
+        return;
+      }
       const quantity = this.bnService.getQualityFrom(BigNumber(150), BigNumber(leverage), bnMarketPrice);
-      const result = await this.bnService.openPosition(pair, quantity.toNumber(), isLong);
-      this.logger.debug(result);
+
+      if (isIncreaseAction) {
+        const result = await this.bnService.increasePosition(pair, quantity, isLong);
+        this.logger.debug(result);
+      } else {
+        const result = await this.bnService.decreasePosition(pair, quantity, isLong);
+        this.logger.debug(result);
+      }
 
       if (this.chatId) {
         await this.bot.telegram.sendMessage(this.chatId, output, {
           parse_mode: 'MarkdownV2',
           disable_web_page_preview: true,
         });
+
+        this.logger.log('成功调仓');
       }
     } catch (error) {
       this.logger.error(error);
       if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, error);
+        await this.bot.telegram.sendMessage(this.chatId, JSON.stringify(error));
       }
     }
   }
@@ -260,7 +278,7 @@ export class AppService {
       } else {
         const result = await this.bnService.setLeverage(pair, leverageRound.toNumber());
         this.logger.debug(result);
-        const result2 = await this.bnService.openPosition(pair, quantity.toNumber(), isLong);
+        const result2 = await this.bnService.openPosition(pair, quantity, isLong);
         this.logger.debug(result2);
       }
 
@@ -269,6 +287,7 @@ export class AppService {
           parse_mode: 'MarkdownV2',
           disable_web_page_preview: true,
         });
+        this.logger.log('成功开仓');
       }
     } catch (error) {
       this.logger.error(error);
@@ -292,9 +311,13 @@ export class AppService {
   async handlePositionClosedAllEvent(event: TradeEvent) {
     this.logger.log('收到全部平仓信号');
     const result = await this.bnService.closeAllPosition();
-    this.logger.debug(`已全部平仓 ${JSON.stringify(result)}`);
+    if (result === undefined) {
+      this.logger.log('不需要全部平仓信号，跳过');
+    } else {
+      this.logger.debug(`已全部平仓 ${JSON.stringify(result)}`);
 
-    await this.replyWithMarkdown('🏦已全部平仓🏦');
+      await this.replyWithMarkdown('🏦已全部平仓🏦');
+    }
   }
 
   private displayInfo(trade: ITrade): TGBotPositionDisplayInfo {
@@ -309,7 +332,7 @@ export class AppService {
 
     // 可读文本
 
-    const relativeTimeDisplay = moment(trade.timestamp).locale('zh-cn').fromNow();
+    const relativeTimeDisplay = moment(timestamp).locale('zh-cn').fromNow();
     const timestampDisplay = moment(timestamp).tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
     const tokenDisplay = token ?? '??';
     const isLongDisplay = trade.isLong ? 'Long (做多)' : 'Short (做空)';

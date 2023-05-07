@@ -8,7 +8,7 @@ sources:
 
 plugins:
   - pollingLive:
-      defaultInterval: 10000
+      defaultInterval: 20000
 
 documents:
   - ./src/gmx.house/queries.graphql

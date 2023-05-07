@@ -1,7 +1,7 @@
 import { IPositionDecrease, IPositionIncrease, ITrade } from 'src/interfaces/gmx.interface';
 
 export function isTradeOpen(trade: ITrade): boolean {
-  return trade.increaseList.length == 1 && trade.status == 'open';
+  return trade.updateList.length == 1 && trade.status == 'open';
 }
 
 export function isTradeLiquidated(trade: ITrade): boolean {

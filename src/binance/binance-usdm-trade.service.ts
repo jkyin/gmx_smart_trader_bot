@@ -56,7 +56,7 @@ export class BNService {
   // 1 * 40000 = 20000 * 2
   // quality = usd * leverage / market
   getQualityFrom(usdt: BigNumber, leverage: BigNumber, entryPrice: BigNumber) {
-    return usdt.multipliedBy(leverage).dividedBy(entryPrice);
+    return usdt.multipliedBy(leverage).dividedBy(entryPrice).dp(4);
   }
 
   getUSDTPairOfInterestFromSymbol(symbol: string) {
@@ -84,11 +84,11 @@ export class BNService {
     return await this.usdmClient.setLeverage(params);
   }
 
-  async openPosition(pair: string, quantity: number, isLong: boolean) {
+  async openPosition(pair: string, quantity: BigNumber, isLong: boolean) {
     return this.increasePosition(pair, quantity, isLong);
   }
 
-  async increasePosition(pair: string, quantity: number, isLong: boolean) {
+  async increasePosition(pair: string, quantity: BigNumber, isLong: boolean) {
     if (pair.length == 0) {
       return new Error(`参数错误： 没有 pair ${pair}`);
     }
@@ -96,7 +96,7 @@ export class BNService {
     const params: NewFuturesOrderParams = {
       symbol: pair,
       side: isLong ? 'BUY' : 'SELL',
-      quantity: Math.abs(quantity),
+      quantity: quantity.absoluteValue().toNumber(),
       type: 'MARKET',
     };
 
@@ -106,7 +106,7 @@ export class BNService {
     return result;
   }
 
-  async decreasePosition(pair: string, quantity: number, isLong: boolean) {
+  async decreasePosition(pair: string, quantity: BigNumber, isLong: boolean) {
     if (pair.length == 0) {
       return new Error(`参数错误： 没有 pair ${pair}`);
     }
@@ -121,7 +121,7 @@ export class BNService {
     const params: NewFuturesOrderParams = {
       symbol: pair,
       side: isLong ? 'SELL' : 'BUY',
-      quantity: Math.abs(quantity),
+      quantity: quantity.absoluteValue().toNumber(),
       type: 'MARKET',
     };
 
@@ -146,7 +146,7 @@ export class BNService {
     const params: NewFuturesOrderParams = {
       symbol: position.symbol,
       side: Number(position.positionAmt) < 0 ? 'BUY' : 'SELL',
-      quantity: Math.abs(Number(position.positionAmt)),
+      quantity: BigNumber(position.positionAmt).absoluteValue().toNumber(),
       type: 'MARKET',
     };
     const result = await this.usdmClient.submitNewOrder(params);
@@ -165,7 +165,7 @@ export class BNService {
       const params: NewFuturesOrderParams = {
         symbol: position.symbol,
         side: Number(position.positionAmt) < 0 ? 'BUY' : 'SELL',
-        quantity: Math.abs(Number(position.positionAmt)),
+        quantity: BigNumber(position.positionAmt).absoluteValue().toNumber(),
         type: 'MARKET',
       };
 

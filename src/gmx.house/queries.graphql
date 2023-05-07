@@ -1,4 +1,4 @@
-query AccountTradeList($pageSize: Int = 10, $account: String, $status: Status) @live {
+query AccountTradeList($pageSize: Int = 3, $account: String, $status: Status) @live {
     trades(
       first: $pageSize
       skip: 0

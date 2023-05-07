@@ -2660,7 +2660,7 @@ sources[0] = {
         }
 additionalEnvelopPlugins[0] = await UsePollingLive({
           ...({
-  "defaultInterval": 10000
+  "defaultInterval": 20000
 }),
           logger: logger.child("pollingLive"),
           cache,
@@ -2926,7 +2926,7 @@ ${UpdatePositionFieldsFragmentDoc}
 ${ClosePositionFieldsFragmentDoc}
 ${LiquidatePositionFieldsFragmentDoc}` as unknown as DocumentNode<TradeFieldsFragment, unknown>;
 export const AccountTradeListDocument = gql`
-    query AccountTradeList($pageSize: Int = 10, $account: String, $status: Status) @live {
+    query AccountTradeList($pageSize: Int = 3, $account: String, $status: Status) @live {
   trades(first: $pageSize, skip: 0, where: {account: $account, status: $status}) {
     ...TradeFields
   }

@@ -3,9 +3,9 @@ import { ClosePosition, DecreasePosition, IncreasePosition, LiquidatePosition, M
 export interface TradeEvent {
   trade: CEXTrade;
   raw: ITrade;
-  updateAction?: IPositionIncrease | IPositionDecrease;
-  closeAction?: IPositionClose;
-  liquidateAction?: IPositionLiquidate;
+  updateAction?: IPositionIncrease | IPositionDecrease | null;
+  closeAction?: IPositionClose | null;
+  liquidateAction?: IPositionLiquidate | null;
 }
 
 export interface TGBotPositionDisplayInfo {
