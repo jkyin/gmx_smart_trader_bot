@@ -17,9 +17,9 @@ export class BNService {
   constructor(private configService: ConfigService, private logger: Logger) {
     this.usdmClient = new USDMClient(
       {
-        api_key: configService.get<string>('TEST_BINANCE_FUTURE_API_KEY'),
+        api_key: configService.get<string>('BINANCE_FUTURE_API_KEY'),
         // eslint-disable-next-line prettier/prettier
-        api_secret: configService.get<string>('TEST_BINANCE_FUTURE_API_SCERET'),
+        api_secret: configService.get<string>('BINANCE_FUTURE_API_SCERET'),
         beautifyResponses: true,
       },
       {},
