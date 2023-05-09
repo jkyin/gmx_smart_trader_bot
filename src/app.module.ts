@@ -9,6 +9,9 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Telegraf } from 'telegraf';
 import { LoggerModule } from './logger/logger.module';
 import { BNModule } from './binance/binance.module';
+import { HealthController } from './health/health.controller';
+import { TerminusModule } from '@nestjs/terminus';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -31,8 +34,10 @@ import { BNModule } from './binance/binance.module';
     }),
     GMXModule,
     BNModule,
+    TerminusModule,
+    HealthModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService, Telegraf],
 })
 export class AppModule {}

@@ -22,13 +22,16 @@
     "graphiql": "graphclient serve-dev"
   },
   "dependencies": {
+    "@nestjs/axios": "^2.0.0",
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^2.3.1",
     "@nestjs/core": "^9.0.0",
     "@nestjs/event-emitter": "^1.4.1",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/schedule": "^2.2.1",
+    "@nestjs/terminus": "^9.2.2",
     "@types/lodash": "^4.14.194",
+    "axios": "^1.4.0",
     "bignumber.js": "^9.1.1",
     "binance": "^2.5.4",
     "currency.js": "^2.0.4",

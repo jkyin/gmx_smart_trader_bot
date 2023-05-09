@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { USDMClient, FuturesPosition, NewFuturesOrderParams, SetLeverageParams, SymbolPrice } from 'binance';
 import { PAIR_OF_INTEREST } from './binance.constants';
 import { Logger } from 'src/logger/logger.service';
 import BigNumber from 'bignumber.js';
 import { Cron } from '@nestjs/schedule';
 import * as _ from 'lodash';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class BNService {
@@ -15,15 +15,27 @@ export class BNService {
   private _allPositions: FuturesPosition[];
 
   constructor(private configService: ConfigService, private logger: Logger) {
+    const apiKey = configService.get<string>('BINANCE_FUTURE_API_KEY');
+    const apiSecret = configService.get<string>('BINANCE_FUTURE_API_SCERET');
+    const isProd = configService.get<boolean>('PROD');
+
+    if (!apiKey) {
+      throw new Error('no binance api key env');
+    }
+
+    if (!apiSecret) {
+      throw new Error('no binance api secret env');
+    }
+
     this.usdmClient = new USDMClient(
       {
-        api_key: configService.get<string>('BINANCE_FUTURE_API_KEY'),
+        api_key: apiKey,
         // eslint-disable-next-line prettier/prettier
-        api_secret: configService.get<string>('BINANCE_FUTURE_API_SCERET'),
+        api_secret: apiSecret,
         beautifyResponses: true,
       },
       {},
-      true,
+      isProd ? false : true,
     );
   }
 
@@ -33,6 +45,10 @@ export class BNService {
 
   get allPositions() {
     return this._allPositions;
+  }
+
+  getMultiAssetsMode() {
+    return this.usdmClient.getMultiAssetsMode();
   }
 
   @Cron('* * * * * *')
