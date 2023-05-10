@@ -40,7 +40,14 @@ export class AppService {
     const reply = markdownV2Example;
     const currency = escapeTgSpecialChars(formatCurrency(BigNumber(12345)));
     const append1 = '\n加仓 $239,352\n\n';
-    await ctx.replyWithMarkdownV2(formatLeftAlign(reply + currency + append1), { disable_web_page_preview: true });
+    const bnMarketPrice = (await this.bnService.pairMarketPrice())['BTCUSDT'];
+    const quantity = escapeTgSpecialChars((await this.bnService.getQuantity('BTC', BigNumber(200), BigNumber(10), bnMarketPrice)).toString());
+
+    const result = formatLeftAlign(reply + currency + append1 + `\nquantity ${quantity}\n\n`);
+
+    await ctx.replyWithMarkdownV2(result, {
+      disable_web_page_preview: true,
+    });
   }
 
   @Hears('test1')
@@ -60,13 +67,14 @@ export class AppService {
 
   @Command('status')
   async onSticker(ctx: Context) {
-    const status = this.gmxService.isWatching ? '🟢 任务正在进行中。' : '🟡 没有运行中的任务';
+    const status = this.gmxService.isWatching ? '🟢任务正在进行中。' : '🟡没有运行中的任务';
     await ctx.reply(status);
   }
 
   @Command('start_watch')
   async handleStartWatch(ctx: Context) {
     if (this.gmxService.isWatching) {
+      await ctx.reply('🟢正在监控中，无需重复开启，跳过。');
       return;
     }
 
@@ -155,7 +163,7 @@ export class AppService {
     }
 
     const isIncreaseAction = action.__typename === 'IncreasePosition';
-    const bnMarketPrice = this.bnService.pairMarketPrice[pair];
+    const bnMarketPrice = (await this.bnService.pairMarketPrice())[pair];
     const isLong = rawTrade.isLong;
     const factory = 10 ** GMX_DECIMALS;
 
@@ -178,37 +186,52 @@ export class AppService {
     ${updateInfo}
     `;
 
-    const reply = `
-      *账号信息*
-
-      地址： ${account}
-
-      [debank](https://debank.com/profile/${account}/history?chain=arb)
-      [gmx\\.house](https://www.gmx.house/arbitrum/account/${account})
-      [gmx\\.io](https://app.gmx.io/#/actions/${account})
-
-      ${positionInfoFormatted}
-    `;
-
-    const output = formatLeftAlign(reply);
-
     try {
       const leverage = (await this.bnService.getActiveFuturePositionInfo(pair))?.leverage;
       if (!leverage) {
         this.logger.warn(`想要调仓，但是 bnService.getActiveFuturePositionInfo(${pair}))?.leverage 结果为 ${leverage}`);
         return;
       }
-      const quantity = this.bnService.getQualityFrom(BigNumber(150), BigNumber(leverage), bnMarketPrice);
+
+      const preferLeverage = BigNumber(leverage);
+      const preferMargin = this.getPreferMargin(position.collateral);
+
+      const quantity = await this.bnService.getQuantity(symbol, preferMargin, preferLeverage, bnMarketPrice);
 
       if (isIncreaseAction) {
+        this.logger.log(`[binance] 准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.increasePosition(pair, quantity, isLong);
-        this.logger.debug(result);
+        this.logger.debug(`[binance] 加仓成功： ${JSON.stringify(result)}`);
       } else {
+        this.logger.log(`[binance] 准备减仓仓， 减少保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.decreasePosition(pair, quantity, isLong);
-        this.logger.debug(result);
+        this.logger.debug(`[binance] 减仓成功： ${JSON.stringify(result)}`);
       }
 
+      const binanceMsg = isIncreaseAction
+        ? `增加保证金：${formatCurrency(preferMargin)}， 当前杠杆：${preferLeverage.toString()}`
+        : `减少保证金：${formatCurrency(preferMargin)}， 当前杠杆：${preferLeverage.toString()}`;
+
+      // telegram
       if (this.chatId) {
+        const reply = `
+        *账号信息*
+  
+        地址： ${account}
+  
+        [debank](https://debank.com/profile/${account}/history?chain=arb)
+        [gmx\\.house](https://www.gmx.house/arbitrum/account/${account})
+        [gmx\\.io](https://app.gmx.io/#/actions/${account})
+  
+        ${positionInfoFormatted}
+
+        *币安交易信息*
+
+        ${escapeTgSpecialChars(binanceMsg)}
+      `;
+
+        const output = formatLeftAlign(reply);
+
         await this.bot.telegram.sendMessage(this.chatId, output, {
           parse_mode: 'MarkdownV2',
           disable_web_page_preview: true,
@@ -230,7 +253,7 @@ export class AppService {
     const account = rawTrade.account;
     const symbol = event.trade.symbol;
     const pair = event.trade.pair;
-    const bnMarketPrice = this.bnService.pairMarketPrice[pair];
+    const bnMarketPrice = (await this.bnService.pairMarketPrice())[pair];
     const isLong = rawTrade.isLong;
     const factory = 10 ** GMX_DECIMALS;
     const collateral = BigNumber(rawTrade.collateral).div(factory);
@@ -254,7 +277,24 @@ export class AppService {
 
     `;
 
-    const reply = `
+    try {
+      const preferLeverage = this.getPreferLeverage(leverage.plus(2).integerValue(BigNumber.ROUND_CEIL));
+      const preferMargin = this.getPreferMargin(collateral);
+      const quantity = await this.bnService.getQuantity(symbol, preferMargin, preferLeverage, bnMarketPrice);
+      const activePosition = await this.bnService.getActiveFuturePositionInfo(pair);
+
+      if (activePosition) {
+        this.logger.debug(`已有${pair}仓位，跳过开仓。仓位信息： ${JSON.stringify(activePosition)}`);
+      } else {
+        this.logger.log(`[binance] 准备设置${pair}初始杠杆为:${preferLeverage.toString()}`);
+        const result = await this.bnService.setLeverage(pair, preferLeverage.toNumber());
+        this.logger.debug(result);
+        this.logger.log(`[binance] 准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
+        const result2 = await this.bnService.openPosition(pair, quantity, isLong);
+        this.logger.log(`[binance] 开仓成功， ${JSON.stringify(result2)}`);
+      }
+
+      const reply = `
       *账号信息*
 
       地址： ${account}
@@ -264,30 +304,19 @@ export class AppService {
       [gmx\\.io](https://app.gmx.io/#/actions/${account})
 
       ${positionInfoFormatted}
+
+      *币安交易信息*
+
+      开仓成功，保证金:${formatCurrency(preferMargin)}, 杠杆：${preferLeverage.toString()}x
     `;
 
-    const output = formatLeftAlign(reply);
-
-    try {
-      const leverageRound = leverage.plus(2).integerValue(BigNumber.ROUND_CEIL);
-      const quantity = this.bnService.getQualityFrom(BigNumber(100), leverageRound, bnMarketPrice);
-      const activePosition = await this.bnService.getActiveFuturePositionInfo(pair);
-
-      if (activePosition) {
-        this.logger.debug(`已有 ${pair} 仓位，跳过开仓。仓位信息： ${JSON.stringify(activePosition)}`);
-      } else {
-        const result = await this.bnService.setLeverage(pair, leverageRound.toNumber());
-        this.logger.debug(result);
-        const result2 = await this.bnService.openPosition(pair, quantity, isLong);
-        this.logger.debug(result2);
-      }
+      const output = formatLeftAlign(reply);
 
       if (this.chatId) {
         await this.bot.telegram.sendMessage(this.chatId, output, {
           parse_mode: 'MarkdownV2',
           disable_web_page_preview: true,
         });
-        this.logger.log('成功开仓');
       }
     } catch (error) {
       this.logger.error(error);
@@ -349,6 +378,7 @@ export class AppService {
       entryPrice: entryPriceDisplay,
       leverage: leverageDisplay,
       sizeValue: sizeValueDisplay,
+      collateral: collateral,
       collateralValue: collateralValueDisplay,
       pnl: '',
       liquidationPrice: '',
@@ -370,5 +400,19 @@ export class AppService {
         await this.bot.telegram.sendMessage(this.chatId, error);
       }
     }
+  }
+
+  getPreferMargin(collateral: BigNumber) {
+    if (collateral.lte(2000)) {
+      return BigNumber(200);
+    } else if (collateral.lte(6000)) {
+      return BigNumber(400);
+    } else {
+      return BigNumber(500);
+    }
+  }
+
+  getPreferLeverage(leverage: BigNumber) {
+    return BigNumber.minimum(15, leverage);
   }
 }

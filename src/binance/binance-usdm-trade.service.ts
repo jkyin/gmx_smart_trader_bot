@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { USDMClient, FuturesPosition, NewFuturesOrderParams, SetLeverageParams, SymbolPrice } from 'binance';
+import { USDMClient, FuturesPosition, NewFuturesOrderParams, SetLeverageParams, SymbolPrice, FuturesSymbolExchangeInfo } from 'binance';
 import { PAIR_OF_INTEREST } from './binance.constants';
 import { Logger } from 'src/logger/logger.service';
 import BigNumber from 'bignumber.js';
@@ -9,7 +9,9 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class BNService {
-  private _pairMarketPrice: { [key: string]: BigNumber } = {};
+  private _pairMarketPriceStore: { [key: string]: BigNumber } = {};
+  private _pairExchangeInfoStore: FuturesSymbolExchangeInfo[] = [];
+
   private usdmClient: USDMClient;
 
   private _allPositions: FuturesPosition[];
@@ -41,8 +43,11 @@ export class BNService {
     );
   }
 
-  get pairMarketPrice() {
-    return this._pairMarketPrice;
+  async pairMarketPrice() {
+    if (Object.keys(this._pairMarketPriceStore).length === 0) {
+      await this.getPairsMarketPrice();
+    }
+    return this._pairMarketPriceStore;
   }
 
   get allPositions() {
@@ -53,7 +58,8 @@ export class BNService {
     return this.usdmClient.getMultiAssetsMode();
   }
 
-  @Cron('* * * * * *')
+  // 立马执行，然后每秒间隔。
+  @Cron('* * * * *')
   private async getPairsMarketPrice() {
     const prices = PAIR_OF_INTEREST.map((pair) => {
       return this.usdmClient.getSymbolPriceTicker({
@@ -65,21 +71,86 @@ export class BNService {
     result.forEach((settled) => {
       if (settled.status == 'fulfilled') {
         const value = settled.value;
-        this._pairMarketPrice[value.symbol] = BigNumber(value.price);
+        this._pairMarketPriceStore[value.symbol] = BigNumber(value.price);
       }
     });
   }
 
-  // quality * market = usd * leverage
-  // 1 * 40000 = 20000 * 2
-  // quality = usd * leverage / market
-  getQualityFrom(usdt: BigNumber, leverage: BigNumber, entryPrice: BigNumber) {
-    return usdt.multipliedBy(leverage).dividedBy(entryPrice).dp(4);
+  // 立马执行，然后每小时间隔。
+  @Cron('* */1 * * *')
+  private async getExchangeInfo() {
+    const exchangeInfo = await this.usdmClient.getExchangeInfo();
+    this._pairExchangeInfoStore = exchangeInfo.symbols;
   }
 
-  getUSDTPairOfInterestFromSymbol(symbol: string) {
-    return PAIR_OF_INTEREST.filter((p) => p.includes(symbol));
+  async getQuantityPrecision(symbol: string, quoteAsset = 'USDT') {
+    if (this._pairExchangeInfoStore.length == 0) {
+      await this.getExchangeInfo();
+    }
+
+    const pair = this.getPairOfInterestFromSymbol(symbol, quoteAsset);
+    const info = this._pairExchangeInfoStore.find((item) => item.symbol === pair);
+    const precision = info?.quantityPrecision;
+    if (precision === undefined) {
+      return new Error(`no ${pair} quantityPrecision found`);
+    }
+
+    return precision;
   }
+
+  async getQuotePrecision(symbol: string, quoteAsset = 'USDT') {
+    if (this._pairExchangeInfoStore.length == 0) {
+      await this.getExchangeInfo();
+    }
+
+    const pair = this.getPairOfInterestFromSymbol(symbol, quoteAsset);
+    const info = this._pairExchangeInfoStore.find((item) => item.symbol === pair);
+    const precision = info?.quotePrecision;
+    if (precision === undefined) {
+      return new Error(`no ${pair} quotePrecision found`);
+    }
+
+    return precision;
+  }
+
+  // Initial Margin = Quantity * Entry Price * IMR
+  // IMR = 1 / leverage
+  //
+  // Quantity *  Entry Price = Initial Margin * leverage
+  // 1 * 40000 = 20000 * 2
+  // Quantity =  Initial Margin * leverage / Entry Price
+  //
+  // precision 一般来自 binance api 中的 /fapi/v1/exchangeInfo 中的 quantityPrecision。
+  //           表示某个 symbol 最大支持的精度，如果下单时传入的 quantity 精度超过了要求，会报错误码 1111。
+  async getQuantity(symbol: string, usdtMagin: BigNumber, leverage: BigNumber, entryPrice: BigNumber) {
+    const precision = await this.getQuantityPrecision(symbol);
+    if (precision instanceof Error) {
+      throw precision;
+    }
+
+    return usdtMagin.multipliedBy(leverage).dividedBy(entryPrice).dp(precision);
+  }
+
+  // 计算目标杠杆倍数所需的保证金数量。
+  // 目前只用于通过增加保证金，降低合约杠杆倍数。
+  async getMarginAmount(symbol: string, price: BigNumber, quantity: BigNumber, targetLeverage: BigNumber) {
+    const precision = await this.getQuotePrecision(symbol);
+    if (precision instanceof Error) {
+      throw precision;
+    }
+
+    return quantity.multipliedBy(price).dividedBy(targetLeverage).dp(precision);
+  }
+
+  getPairOfInterestFromSymbol(symbol: string, quoteAsset = 'USDT') {
+    return _.head(PAIR_OF_INTEREST.filter((p) => p.includes(symbol + quoteAsset)));
+  }
+
+  // Max (0，min (isolatedWalletBalance, isolatedWalletBalance + size * (Mark Price - Entry Price) - Mark Price * abs(size) * IMR ))
+  // isolatedWalletBalance 为逐仓仓位保证金 isolatedMargin
+  // getMaxReduceMargin() {
+  //   _.max(0， _min(isolatedWalletBalance, isolatedWalletBalance + size * (Mark Price - Entry Price) - Mark Price * abs(size) * IMR ))
+  // }
 
   async getActiveFuturePositionInfo(pair: string) {
     const positions = await this.getActiveFuturesPositions();

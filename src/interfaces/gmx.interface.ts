@@ -1,4 +1,5 @@
 import { ClosePosition, DecreasePosition, IncreasePosition, LiquidatePosition, Maybe, Trade, UpdatePosition } from '.graphclient';
+import BigNumber from 'bignumber.js';
 
 export interface TradeEvent {
   trade: CEXTrade;
@@ -19,6 +20,7 @@ export interface TGBotPositionDisplayInfo {
   collateralValue: string;
   pnl: string;
   liquidationPrice: string;
+  collateral: BigNumber;
 }
 
 export interface CEXTrade {

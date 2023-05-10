@@ -28,6 +28,8 @@ ${escapeTelegramSpecialChars('1. debank(https://debank.com/profile/0x7b7736a2c07
 💰仓位:       $55,000
 💵清算价:      $800
 
+增加保证金： $300， 当前杠杆： 11
+
 \`inline fixed-width code\`
 \`\`\`
 pre-formatted fixed-width code block

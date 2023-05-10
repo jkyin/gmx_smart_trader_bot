@@ -11,6 +11,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const webhookPath = configService.get<string>('WEBHOOK_PATH');
   const port = configService.get<number>('PORT');
+  const tg = configService.get<string>('TELEGRAM_BOT_TOKEN');
 
   if (!webhookPath) {
     throw new Error('no webhookPath env.');
