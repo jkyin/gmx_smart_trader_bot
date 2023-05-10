@@ -11,9 +11,9 @@ export class BinanceHealthIndicator extends HealthIndicator {
   async checkAPIValid(): Promise<HealthIndicatorResult> {
     try {
       await this.bnService.getMultiAssetsMode();
-      return this.getStatus('binance-future-api', true);
+      return this.getStatus('binance-future-api', true, { isProd: process.env.PROD });
     } catch (error) {
-      return this.getStatus('binance-future-api', false, { message: error.message });
+      return this.getStatus('binance-future-api', false, { message: error.message, isProd: process.env.PROD });
     }
   }
 }

@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { Logger } from './logger/logger.service';
 import { getBotToken } from 'nestjs-telegraf';
 import { ConfigService } from '@nestjs/config';
-import moment from 'moment';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });

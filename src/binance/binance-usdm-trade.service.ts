@@ -17,7 +17,9 @@ export class BNService {
   constructor(private configService: ConfigService, private logger: Logger) {
     const apiKey = configService.get<string>('BINANCE_FUTURE_API_KEY');
     const apiSecret = configService.get<string>('BINANCE_FUTURE_API_SCERET');
-    const isProd = configService.get<boolean>('PROD');
+    const isProd = configService.get<string>('PROD') === 'true';
+    const useTestnet = isProd ? false : true;
+    logger.log(`当前 binance 环境为 ${useTestnet ? 'testnet' : '正式服'}`);
 
     if (!apiKey) {
       throw new Error('no binance api key env');
@@ -35,7 +37,7 @@ export class BNService {
         beautifyResponses: true,
       },
       {},
-      isProd ? false : true,
+      useTestnet,
     );
   }
 
