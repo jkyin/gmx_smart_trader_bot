@@ -278,7 +278,7 @@ export class AppService {
     `;
 
     try {
-      const preferLeverage = this.getPreferLeverage(leverage.plus(2).integerValue(BigNumber.ROUND_CEIL));
+      const preferLeverage = this.getPreferLeverage(leverage.integerValue(BigNumber.ROUND_CEIL));
       const preferMargin = this.getPreferMargin(collateral);
       const quantity = await this.bnService.getQuantity(symbol, preferMargin, preferLeverage, bnMarketPrice);
       const activePosition = await this.bnService.getActiveFuturePositionInfo(pair);
@@ -406,13 +406,13 @@ export class AppService {
     if (collateral.lte(2000)) {
       return BigNumber(200);
     } else if (collateral.lte(6000)) {
-      return BigNumber(400);
+      return BigNumber(300);
     } else {
       return BigNumber(500);
     }
   }
 
   getPreferLeverage(leverage: BigNumber) {
-    return BigNumber.minimum(15, leverage);
+    return BigNumber.minimum(15, leverage.plus(2));
   }
 }

@@ -12,15 +12,16 @@ export class BNService {
   private _pairMarketPriceStore: { [key: string]: BigNumber } = {};
   private _pairExchangeInfoStore: FuturesSymbolExchangeInfo[] = [];
 
-  private usdmClient: USDMClient;
-
   private _allPositions: FuturesPosition[];
+
+  private client: USDMClient;
 
   constructor(private configService: ConfigService, private logger: Logger) {
     const apiKey = configService.get<string>('BINANCE_FUTURE_API_KEY');
     const apiSecret = configService.get<string>('BINANCE_FUTURE_API_SCERET');
     const isProd = configService.get<string>('PROD') === 'true';
     const useTestnet = isProd ? false : true;
+
     logger.log(`当前 binance 环境为 ${useTestnet ? 'testnet' : '正式服'}`);
 
     if (!apiKey) {
@@ -31,7 +32,7 @@ export class BNService {
       throw new Error('no binance api secret env');
     }
 
-    this.usdmClient = new USDMClient(
+    this.client = new USDMClient(
       {
         api_key: apiKey,
         // eslint-disable-next-line prettier/prettier
@@ -47,22 +48,27 @@ export class BNService {
     if (Object.keys(this._pairMarketPriceStore).length === 0) {
       await this.getPairsMarketPrice();
     }
+
     return this._pairMarketPriceStore;
   }
 
-  get allPositions() {
+  async allPositions() {
+    if (this._allPositions.length === 0) {
+      await this.getActiveFuturesPositions();
+    }
+
     return this._allPositions;
   }
 
   getMultiAssetsMode() {
-    return this.usdmClient.getMultiAssetsMode();
+    return this.client.getMultiAssetsMode();
   }
 
   // 立马执行，然后每秒间隔。
   @Cron('* * * * *')
   private async getPairsMarketPrice() {
     const prices = PAIR_OF_INTEREST.map((pair) => {
-      return this.usdmClient.getSymbolPriceTicker({
+      return this.client.getSymbolPriceTicker({
         symbol: pair,
       }) as Promise<SymbolPrice>;
     });
@@ -79,7 +85,7 @@ export class BNService {
   // 立马执行，然后每小时间隔。
   @Cron('* */1 * * *')
   private async getExchangeInfo() {
-    const exchangeInfo = await this.usdmClient.getExchangeInfo();
+    const exchangeInfo = await this.client.getExchangeInfo();
     this._pairExchangeInfoStore = exchangeInfo.symbols;
   }
 
@@ -159,7 +165,7 @@ export class BNService {
   }
 
   async getActiveFuturesPositions() {
-    const list = await this.usdmClient.getPositions();
+    const list = await this.client.getPositions();
     const result = list.filter((p) => PAIR_OF_INTEREST.includes(p.symbol) && p.positionAmt != 0);
     this._allPositions = result;
     return result;
@@ -170,7 +176,7 @@ export class BNService {
       symbol: pair,
       leverage: leverage,
     };
-    return await this.usdmClient.setLeverage(params);
+    return await this.client.setLeverage(params);
   }
 
   async openPosition(pair: string, quantity: BigNumber, isLong: boolean) {
@@ -191,7 +197,7 @@ export class BNService {
 
     this.logger.debug(`加/开仓： ${JSON.stringify(params)}`);
 
-    const result = await this.usdmClient.submitNewOrder(params);
+    const result = await this.client.submitNewOrder(params);
     return result;
   }
 
@@ -216,7 +222,7 @@ export class BNService {
 
     this.logger.debug(`减仓： ${JSON.stringify(params)}`);
 
-    const result = await this.usdmClient.submitNewOrder(params);
+    const result = await this.client.submitNewOrder(params);
     return result;
   }
 
@@ -238,7 +244,7 @@ export class BNService {
       quantity: BigNumber(position.positionAmt).absoluteValue().toNumber(),
       type: 'MARKET',
     };
-    const result = await this.usdmClient.submitNewOrder(params);
+    const result = await this.client.submitNewOrder(params);
     return result;
   }
 
@@ -258,7 +264,7 @@ export class BNService {
         type: 'MARKET',
       };
 
-      return this.usdmClient.submitNewOrder(params);
+      return this.client.submitNewOrder(params);
     });
 
     return Promise.allSettled(orders);

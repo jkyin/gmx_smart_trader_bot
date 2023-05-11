@@ -215,47 +215,6 @@ export class GMXService {
     this.logger.debug(`cexTradeList: ${JSON.stringify(this.cexTradeList)}`);
   }
 
-  private emitTradeAction(trade: Trade) {
-    // changes.forEach(change => {
-    //   switch (change) {
-    //     case value:
-    //       break;
-    //     default:
-    //       break;
-    //   }
-    // });
-  }
-
-  private testChanges() {
-    // const xyz: (IncreasePosition | DecreasePosition)[] = [
-    //   {
-    //     id: 'IncreasePosition:51:0xa47d1a82b187afac4bf1323a3cce08f2cc2f8ed595671f93fb5d96b05af53e1c',
-    //     timestamp: 1682558917,
-    //     account: '0x7b7736a2c07c4332ffad45a039d2117ae15e3f66',
-    //     collateralToken: '0xff970a61a04b1ca14834a43f5de4533ebddb5cc8',
-    //     indexToken: '0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f',
-    //     isLong: false,
-    //     key: '0x8a3c36d2963dc0eb9244a0d711500e35701618b5dc4b2931ec4109afc1859e43',
-    //     collateralDelta: '5000000000000000000000000000000000',
-    //     sizeDelta: '49504950321389881500000000000000000',
-    //     fee: '49504950321389881500000000000000',
-    //     price: '28837641000000000000000000000000000',
-    //   },
-    // ];
-    // const trade = this._activeTrades?.filter((t) => t.indexToken === '0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f')[0];
-    // const activeList: (IncreasePosition | DecreasePosition)[] = trade?.increaseList;
-    // const result2 = _.differenceBy(xyz, actionList, 'id');
-    // result.forEach((diff) => {
-    //   switch (diff.type) {
-    //     case 'CREATE':
-    //       break;
-    //     case
-    //     default:
-    //       break;
-    //   }
-    // })
-  }
-
   stopWatch() {
     this.startWatch = false;
     this._isWatching = false;
