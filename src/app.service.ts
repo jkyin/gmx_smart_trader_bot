@@ -155,7 +155,7 @@ export class AppService {
     const pair = event.trade.pair;
     const action = event.updateAction;
 
-    this.logger.log(`收到 ${symbol} 调仓信号`);
+    this.logger.log(`收到 ${symbol} 调仓信号, 参数： ${JSON.stringify(event)}`);
 
     if (!action) {
       this.logger.error('需要有 event.updateAction, 但是没有值。');
@@ -261,7 +261,7 @@ export class AppService {
     const leverage = size.div(collateral);
     const position = this.displayInfo(rawTrade);
 
-    this.logger.log(`收到 ${symbol} 开仓信号`);
+    this.logger.log(`收到 ${symbol} 开仓信号, 参数： ${JSON.stringify(event)}`);
 
     const positionInfoFormatted = `
     🏦*当前 ${position.token} 仓位* 🏦
@@ -329,9 +329,11 @@ export class AppService {
   @OnEvent(POSITION_CLOSED)
   async handlePositionClosedEvent(event: TradeEvent) {
     const pair = event.trade.pair;
-    this.logger.log(`收到 ${pair} 平仓信号`);
+    this.logger.log(`收到 ${pair} 平仓信号, 参数： ${JSON.stringify(event)}`);
+    this.logger.log(`[binance] 处理 ${pair} 平仓`);
+
     const result = await this.bnService.closePosition(pair);
-    this.logger.debug(`已平仓 ${JSON.stringify(result)}`);
+    this.logger.debug(`[binance] 已平仓 ${JSON.stringify(result)}`);
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
   }
@@ -339,11 +341,14 @@ export class AppService {
   @OnEvent(POSITION_CLOSED_ALL)
   async handlePositionClosedAllEvent(event: TradeEvent) {
     this.logger.log('收到全部平仓信号');
+    this.logger.log('[binance] 处理全部平仓');
+
     const result = await this.bnService.closeAllPosition();
+
     if (result === undefined) {
       this.logger.log('不需要全部平仓信号，跳过');
     } else {
-      this.logger.debug(`已全部平仓 ${JSON.stringify(result)}`);
+      this.logger.debug(`[binance] 已全部平仓 ${JSON.stringify(result)}`);
 
       await this.replyWithMarkdown('🏦已全部平仓🏦');
     }
@@ -402,6 +407,7 @@ export class AppService {
     }
   }
 
+  // 每次加仓数量。
   getPreferMargin(collateral: BigNumber) {
     if (collateral.lte(2000)) {
       return BigNumber(200);
