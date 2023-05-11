@@ -110,7 +110,7 @@ export class AppService {
   async openedPositions(ctx: Context) {
     const trades = this.gmxService.activeTrades;
     if (trades === undefined) {
-      await ctx.reply('🟡 没有运行中的任务');
+      await ctx.reply('🟡 没有运行中的任务，所以没有自动开启的仓位');
       return;
     }
 
