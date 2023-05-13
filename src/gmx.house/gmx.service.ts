@@ -127,7 +127,7 @@ export class GMXService {
       }
 
       if (!action) {
-        this.logger.warn('异常情况，应该有 action，但是没有。');
+        this.logger.warn(`${pair}异常情况，应该有 action，但是没有。`);
         return;
       }
 
@@ -145,14 +145,14 @@ export class GMXService {
       this.logger.debug(`bnTradeList: ${JSON.stringify(this.bnTradeList)}`);
     } else if (isTradeClosed(trade)) {
       if (!trade.closedPosition) {
-        this.logger.warn('异常情况，应该有 closedPosition.');
+        this.logger.warn(`${pair}异常情况，应该有 closedPosition.`);
         return;
       }
 
       this.notifyClosePosition(trade, symbol, pair);
     } else {
       if (!bnTrade) {
-        this.logger.warn('想要更新仓位，但监控到 trader 仓位存在， 但服务器没有记录，请手动酌情开启自己的仓位。');
+        this.logger.warn(`想要更新 ${pair} 仓位，但监控到 trader 仓位存在， 但服务器没有记录，请手动酌情开启自己的仓位。`);
         return;
       }
 
@@ -163,7 +163,7 @@ export class GMXService {
 
       if (!action) {
         this.logger.warn(
-          `监控到被观察 trader 仓位存在， 想要处理 changes，但 diff.diff(actionList, lastActionList, this.actionCompare); 结果为空。当前参数为：
+          `${pair} 监控到被观察 trader 仓位存在， 想要处理 changes，但 diff.diff(actionList, lastActionList, this.actionCompare); 结果为空。当前参数为：
           lastActionList: ${JSON.stringify(lastActionList)}
           actionList: ${JSON.stringify(actionList)}
           changes: ${JSON.stringify(changes)}
