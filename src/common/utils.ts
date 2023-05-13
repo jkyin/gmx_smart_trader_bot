@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import * as currency from 'currency.js';
+import currency from 'currency.js';
 
 export const markdownV2Example = `*bold \\*text*
 _italic \\*text_

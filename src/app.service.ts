@@ -10,7 +10,7 @@ import { TradeEvent, TGBotPositionDisplayInfo, ITrade } from './interfaces/gmx.i
 import { Logger } from './logger/logger.service';
 import BigNumber from 'bignumber.js';
 import { BNService } from './binance/binance-usdm-trade.service';
-import * as moment from 'moment-timezone';
+import { dayjs } from './common/day';
 
 @Update()
 @Injectable()
@@ -43,7 +43,20 @@ export class AppService {
     const bnMarketPrice = (await this.bnService.pairMarketPrice())['BTCUSDT'];
     const quantity = escapeTgSpecialChars((await this.bnService.getQuantity('BTC', BigNumber(200), BigNumber(10), bnMarketPrice)).toString());
 
-    const result = formatLeftAlign(reply + currency + append1 + `\nquantity ${quantity}\n\n`);
+    const timestamp = 1683861046000;
+    const relativeTimeDisplay = dayjs.utc(timestamp).fromNow();
+    const timestampDisplay = dayjs.tz(timestamp, 'Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
+
+    const content = `
+    ${reply}
+    ${currency}
+    ${append1}
+    ${quantity}
+    ${escapeTgSpecialChars(relativeTimeDisplay)}
+    ${escapeTgSpecialChars(timestampDisplay)}
+    `;
+
+    const result = formatLeftAlign(content);
 
     await ctx.replyWithMarkdownV2(result, {
       disable_web_page_preview: true,
@@ -199,6 +212,18 @@ export class AppService {
       const quantity = await this.bnService.getQuantity(symbol, preferMargin, preferLeverage, bnMarketPrice);
 
       if (isIncreaseAction) {
+        const balance = await this.bnService.usdtBalance();
+
+        if (balance?.availableBalance === undefined) {
+          this.logger.warn(`想要加仓，但是余额不足 availableBalance ${JSON.stringify(balance?.availableBalance)}`);
+          return;
+        }
+
+        if (BigNumber(balance.availableBalance).isLessThan(preferMargin)) {
+          this.logger.warn(`想要加仓，但是余额不足 availableBalance ${JSON.stringify(balance.availableBalance)}`);
+          return;
+        }
+
         this.logger.log(`[binance] 准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.increasePosition(pair, quantity, isLong);
         this.logger.debug(`[binance] 加仓成功： ${JSON.stringify(result)}`);
@@ -365,9 +390,8 @@ export class AppService {
     const leverage = size.div(collateral);
 
     // 可读文本
-
-    const relativeTimeDisplay = moment(timestamp).locale('zh-cn').fromNow();
-    const timestampDisplay = moment(timestamp).tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
+    const relativeTimeDisplay = dayjs.utc(timestamp).fromNow();
+    const timestampDisplay = dayjs.tz(timestamp, 'Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
     const tokenDisplay = token ?? '??';
     const isLongDisplay = trade.isLong ? 'Long (做多)' : 'Short (做空)';
     const entryPriceDisplay = formatCurrency(entryPrice);
@@ -409,9 +433,11 @@ export class AppService {
 
   // 每次加仓数量。
   getPreferMargin(collateral: BigNumber) {
-    if (collateral.lte(2000)) {
-      return BigNumber(200);
+    if (collateral.lte(3000)) {
+      return BigNumber(100);
     } else if (collateral.lte(6000)) {
+      return BigNumber(200);
+    } else if (collateral.lte(10000)) {
       return BigNumber(300);
     } else {
       return BigNumber(500);

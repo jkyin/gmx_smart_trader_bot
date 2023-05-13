@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { USDMClient, FuturesPosition, NewFuturesOrderParams, SetLeverageParams, SymbolPrice, FuturesSymbolExchangeInfo } from 'binance';
+import {
+  USDMClient,
+  FuturesPosition,
+  NewFuturesOrderParams,
+  SetLeverageParams,
+  SymbolPrice,
+  FuturesSymbolExchangeInfo,
+  FuturesAccountBalance,
+} from 'binance';
 import { PAIR_OF_INTEREST } from './binance.constants';
 import { Logger } from 'src/logger/logger.service';
 import BigNumber from 'bignumber.js';
@@ -9,6 +17,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class BNService {
+  private _usdtBalance: FuturesAccountBalance | undefined;
   private _pairMarketPriceStore: { [key: string]: BigNumber } = {};
   private _pairExchangeInfoStore: FuturesSymbolExchangeInfo[] = [];
 
@@ -44,12 +53,27 @@ export class BNService {
     );
   }
 
+  async usdtBalance() {
+    if (this._usdtBalance === undefined) {
+      await this.fetchUSDTBalance();
+    }
+    return this._usdtBalance;
+  }
+
   async pairMarketPrice() {
     if (Object.keys(this._pairMarketPriceStore).length === 0) {
       await this.getPairsMarketPrice();
     }
 
     return this._pairMarketPriceStore;
+  }
+
+  // 立马执行，然后每2秒间隔。
+  @Cron('2 * * * *')
+  private async fetchUSDTBalance() {
+    const result = await this.client.getBalance();
+    const balance = _.find(result, { asset: 'USDT' });
+    this._usdtBalance = balance;
   }
 
   async allPositions() {

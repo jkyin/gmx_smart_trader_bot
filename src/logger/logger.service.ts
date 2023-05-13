@@ -1,8 +1,8 @@
 import { ConsoleLogger } from '@nestjs/common';
-import * as moment from 'moment-timezone';
+import { dayjs } from 'src/common/day';
 
 export class Logger extends ConsoleLogger {
   protected getTimestamp(): string {
-    return moment().tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss.SSS');
+    return dayjs().format('YYYY-MM-DD HH:mm:ss.SSS');
   }
 }
