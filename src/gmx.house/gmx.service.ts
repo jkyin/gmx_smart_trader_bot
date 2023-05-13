@@ -219,6 +219,7 @@ export class GMXService {
     this._isWatching = false;
     this._lastQueryTrades = [];
     this._watchingInfo = { account: undefined, status: undefined };
+    this.bnTradeList = [];
   }
 
   async syncQueryToBNTradeList() {
