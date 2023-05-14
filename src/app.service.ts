@@ -437,7 +437,7 @@ export class AppService {
       return BigNumber(100);
     } else if (collateral.lte(6000)) {
       return BigNumber(200);
-    } else if (collateral.lte(10000)) {
+    } else if (collateral.lte(9000)) {
       return BigNumber(300);
     } else {
       return BigNumber(500);
