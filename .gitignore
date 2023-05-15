@@ -42,3 +42,4 @@ lerna-debug.log*
 .pnpm-store
 .pnpm-workspace.yaml
 .vercel
+/src/gmx.house/contracts

@@ -99,8 +99,8 @@ export class AppService {
       () => {
         return this.gmxService.watchAccountTradeList(account, positionStatus);
       },
-      2,
-      1000,
+      50,
+      3000,
     ).catch(async (error) => {
       this.gmxService.stopWatch();
       const msg = `发生了错误： ${JSON.stringify(error)}， 🔴已停止监控。`;
@@ -358,7 +358,7 @@ export class AppService {
     this.logger.log(`[binance] 处理 ${pair} 平仓`);
 
     const result = await this.bnService.closePosition(pair);
-    this.logger.debug(`[binance] 已平仓 ${JSON.stringify(result)}`);
+    this.logger.log(`[binance] 已平仓 ${JSON.stringify(result)}`);
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
   }
@@ -371,9 +371,9 @@ export class AppService {
     const result = await this.bnService.closeAllPosition();
 
     if (result === undefined) {
-      this.logger.log('不需要全部平仓信号，跳过');
+      this.logger.log('[binance] 不需要全部平仓，跳过');
     } else {
-      this.logger.debug(`[binance] 已全部平仓 ${JSON.stringify(result)}`);
+      this.logger.log(`[binance] 已全部平仓 ${JSON.stringify(result)}`);
 
       await this.replyWithMarkdown('🏦已全部平仓🏦');
     }
