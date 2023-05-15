@@ -20,7 +20,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "graphiql": "graphclient serve-dev",
-    "typechain:generate": "typechain --target=ethers-v6 --out-dir src/gmx.house/contracts/types 'src/gmx.house/contracts/abis/*.json'",
+    "typechain:generate": "typechain --target=ethers-v6 --out-dir src/gmx.house/contracts/types \"src/gmx.house/contracts/abis/*.json\"",
     "typechain:typecheck": "pnpm typechain:generate && tsc --noEmit"
   },
   "dependencies": {
