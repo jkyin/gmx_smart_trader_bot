@@ -5,6 +5,7 @@ import { getBotToken } from 'nestjs-telegraf';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
+  process.env.TZ = 'Asia/Shanghai';
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
