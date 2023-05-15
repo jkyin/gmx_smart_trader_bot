@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "pnpm typechain:generate && nest build",
+    "build": "graphclient build && pnpm typechain:generate && nest build",
     "build:graphql": "graphclient build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
