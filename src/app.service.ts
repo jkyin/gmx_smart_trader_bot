@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Command, Hears, Help, InjectBot, Start, Update } from 'nestjs-telegraf';
 import { Context, Telegraf } from 'telegraf';
 import { GMXService } from './gmx.house/gmx.service';
@@ -7,7 +7,6 @@ import * as _ from 'lodash';
 import { OnEvent } from '@nestjs/event-emitter';
 import { TOKEN_SYMBOL, POSITION_UPDATED, GMX_DECIMALS, POSITION_OPEN, POSITION_CLOSED, POSITION_CLOSED_ALL } from './common/constants';
 import { TradeEvent, TGBotPositionDisplayInfo, ITrade } from './interfaces/gmx.interface';
-import { Logger } from './logger/logger.service';
 import BigNumber from 'bignumber.js';
 import { BNService } from './binance/binance-usdm-trade.service';
 import { dayjs } from './common/day';
@@ -68,7 +67,7 @@ export class AppService {
     this.bnService
       .getActiveFuturesPositions()
       .then((value) => this.logger.debug(value))
-      .catch((error) => this.logger.error(`getFuturesPositions: ${JSON.stringify(error)}`));
+      .catch((error) => this.logger.error('getFuturesPositions:', error));
   }
 
   @Hears('testSellETH')
@@ -168,7 +167,7 @@ export class AppService {
     const pair = event.trade.pair;
     const action = event.updateAction;
 
-    this.logger.log(`收到 ${symbol} 调仓信号, 参数： ${JSON.stringify(event)}`);
+    this.logger.log(`收到 ${symbol} 调仓信号`, { event: event });
 
     if (!action) {
       this.logger.error('需要有 event.updateAction, 但是没有值。');
@@ -215,22 +214,22 @@ export class AppService {
         const balance = await this.bnService.usdtBalance();
 
         if (balance?.availableBalance === undefined) {
-          this.logger.warn(`想要加仓，但是余额不足 availableBalance ${JSON.stringify(balance?.availableBalance)}`);
+          this.logger.warn('想要加仓，但是余额不足', { availableBalance: balance?.availableBalance });
           return;
         }
 
         if (BigNumber(balance.availableBalance).isLessThan(preferMargin)) {
-          this.logger.warn(`想要加仓，但是余额不足 availableBalance ${JSON.stringify(balance.availableBalance)}`);
+          this.logger.warn('想要加仓，但是余额不足 availableBalance', { availableBalance: balance.availableBalance });
           return;
         }
 
         this.logger.log(`[binance] 准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.increasePosition(pair, quantity, isLong);
-        this.logger.debug(`[binance] 加仓成功： ${JSON.stringify(result)}`);
+        this.logger.debug(`[binance] 加仓成功`, { result: result });
       } else {
         this.logger.log(`[binance] 准备减仓仓， 减少保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.decreasePosition(pair, quantity, isLong);
-        this.logger.debug(`[binance] 减仓成功： ${JSON.stringify(result)}`);
+        this.logger.debug(`[binance] 减仓成功`, { result: result });
       }
 
       const binanceMsg = isIncreaseAction
@@ -286,7 +285,7 @@ export class AppService {
     const leverage = size.div(collateral);
     const position = this.displayInfo(rawTrade);
 
-    this.logger.log(`收到 ${symbol} 开仓信号, 参数： ${JSON.stringify(event)}`);
+    this.logger.log(`收到 ${symbol} 开仓信号`, { event: event });
 
     const positionInfoFormatted = `
     🏦*当前 ${position.token} 仓位* 🏦
@@ -309,14 +308,14 @@ export class AppService {
       const activePosition = await this.bnService.getActiveFuturePositionInfo(pair);
 
       if (activePosition) {
-        this.logger.debug(`已有${pair}仓位，跳过开仓。仓位信息： ${JSON.stringify(activePosition)}`);
+        this.logger.debug(`已有${pair}仓位，跳过开仓`, { activePosition: activePosition });
       } else {
         this.logger.log(`[binance] 准备设置${pair}初始杠杆为:${preferLeverage.toString()}`);
         const result = await this.bnService.setLeverage(pair, preferLeverage.toNumber());
         this.logger.debug(result);
         this.logger.log(`[binance] 准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result2 = await this.bnService.openPosition(pair, quantity, isLong);
-        this.logger.log(`[binance] 开仓成功， ${JSON.stringify(result2)}`);
+        this.logger.log(`[binance] 开仓成功`, { result2: result2 });
       }
 
       const reply = `
@@ -354,11 +353,11 @@ export class AppService {
   @OnEvent(POSITION_CLOSED)
   async handlePositionClosedEvent(event: TradeEvent) {
     const pair = event.trade.pair;
-    this.logger.log(`收到 ${pair} 平仓信号, 参数： ${JSON.stringify(event)}`);
+    this.logger.log(`收到 ${pair} 平仓信号`, { event: event });
     this.logger.log(`[binance] 处理 ${pair} 平仓`);
 
     const result = await this.bnService.closePosition(pair);
-    this.logger.log(`[binance] 已平仓 ${JSON.stringify(result)}`);
+    this.logger.log(`[binance] 已平仓`, { result: result });
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
   }
@@ -373,7 +372,7 @@ export class AppService {
     if (result === undefined) {
       this.logger.log('[binance] 不需要全部平仓，跳过');
     } else {
-      this.logger.log(`[binance] 已全部平仓 ${JSON.stringify(result)}`);
+      this.logger.log(`[binance] 已全部平仓`, { result: result });
 
       await this.replyWithMarkdown('🏦已全部平仓🏦');
     }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   USDMClient,
   FuturesPosition,
@@ -9,7 +9,6 @@ import {
   FuturesAccountBalance,
 } from 'binance';
 import { PAIR_OF_INTEREST } from './binance.constants';
-import { Logger } from 'src/logger/logger.service';
 import BigNumber from 'bignumber.js';
 import { Cron } from '@nestjs/schedule';
 import * as _ from 'lodash';
@@ -44,7 +43,6 @@ export class BNService {
     this.client = new USDMClient(
       {
         api_key: apiKey,
-        // eslint-disable-next-line prettier/prettier
         api_secret: apiSecret,
         beautifyResponses: true,
       },
@@ -219,7 +217,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.debug(`加/开仓： ${JSON.stringify(params)}`);
+    this.logger.debug(`加/开仓`, { params: params });
 
     const result = await this.client.submitNewOrder(params);
     return result;
@@ -244,7 +242,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.debug(`减仓： ${JSON.stringify(params)}`);
+    this.logger.debug(`减仓`, { params: params });
 
     const result = await this.client.submitNewOrder(params);
     return result;

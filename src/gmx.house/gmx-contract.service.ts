@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import { Logger } from 'src/logger/logger.service';
 import { ReaderV2, ReaderV2__factory } from './contracts/types';
 
 @Injectable()

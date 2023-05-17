@@ -1,6 +1,8 @@
 # compiled output
 /dist
 /node_modules
+/src/gmx.house/contracts/types
+.graphclient/*
 
 # Logs
 logs
@@ -42,4 +44,3 @@ lerna-debug.log*
 .pnpm-store
 .pnpm-workspace.yaml
 .vercel
-/src/gmx.house/contracts/types

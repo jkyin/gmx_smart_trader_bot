@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TelegrafModule } from 'nestjs-telegraf';
@@ -7,7 +7,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { GMXModule } from './gmx.house/gmx.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Telegraf } from 'telegraf';
-import { LoggerModule } from './logger/logger.module';
 import { BNModule } from './binance/binance.module';
 import { HealthController } from './health/health.controller';
 import { TerminusModule } from '@nestjs/terminus';
@@ -15,7 +14,6 @@ import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
-    LoggerModule,
     ConfigModule.forRoot(),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
@@ -38,6 +36,6 @@ import { HealthModule } from './health/health.module';
     HealthModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [AppService, Telegraf],
+  providers: [Logger, AppService, Telegraf],
 })
 export class AppModule {}
