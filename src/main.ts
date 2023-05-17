@@ -8,7 +8,7 @@ import { utilities as nestWinstonModuleUtilities, WinstonModule } from 'nest-win
 async function bootstrap() {
   process.env.TZ = 'Asia/Shanghai';
 
-  const logger = configLogger()
+  const logger = configLogger();
   const app = await NestFactory.create(AppModule, {
     logger: logger,
   });
@@ -36,6 +36,7 @@ bootstrap();
 
 function configLogger() {
   const console = new winston.transports.Console({
+    level: 'debug',
     format: winston.format.combine(
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
       winston.format.ms(),

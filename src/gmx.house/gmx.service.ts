@@ -228,8 +228,8 @@ export class GMXService {
   }
 
   private bnTradeListOpen(symbol: string, trade: ITrade, actionList: (IPositionIncrease | IPositionDecrease)[], pair: string) {
-    const newTrade2 = { symbol: symbol, openTimestamp: trade.timestamp, actions: actionList, pair: pair };
-    this.bnTradeList.push(newTrade2);
+    const newTrade = { symbol: symbol, openTimestamp: trade.timestamp, actions: actionList, pair: pair };
+    this.bnTradeList.push(newTrade);
   }
 
   private bnTradeListUpdate(bnTrade: CEXTrade, actionList: (IPositionIncrease | IPositionDecrease)[]) {
