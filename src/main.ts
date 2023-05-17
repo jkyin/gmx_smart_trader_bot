@@ -8,8 +8,9 @@ import { utilities as nestWinstonModuleUtilities, WinstonModule } from 'nest-win
 async function bootstrap() {
   process.env.TZ = 'Asia/Shanghai';
 
+  const logger = configLogger()
   const app = await NestFactory.create(AppModule, {
-    logger: configLogger(),
+    logger: logger,
   });
 
   const configService = app.get(ConfigService);
@@ -28,7 +29,7 @@ async function bootstrap() {
   const bot = app.get(getBotToken());
   app.use(bot.webhookCallback(webhookPath));
 
-  await app.listen(port).catch((error) => console.error(error));
+  await app.listen(port).catch((error) => logger.error(error));
 }
 
 bootstrap();

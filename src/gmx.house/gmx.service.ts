@@ -122,12 +122,12 @@ export class GMXService {
       const action = _.head(actionList);
 
       if (bnTrade) {
-        this.logger.warn(`特殊情况，想要开仓但 binance 已包含已包含 ${pair} 仓位.`);
+        this.logger.warn(`特殊情况，想要开仓但 binance 已包含已包含 ${pair} 仓位. 跳过`);
         return;
       }
 
       if (!action) {
-        this.logger.warn(`${pair}异常情况，应该有 action，但是没有。`);
+        this.logger.warn(`${pair}异常情况，应该有 action，但是没有。 跳过`);
         return;
       }
 
@@ -142,11 +142,15 @@ export class GMXService {
       this.bnTradeListOpen(symbol, trade, actionList, pair);
       this.logger.debug(`已更新 bnTradeList 开仓`, { bnTradeList: this.bnTradeList });
 
-      const givenTime = dayjs.unix(action.timestamp);
-      const diffInSeconds = dayjs().diff(givenTime, 'second');
+      const actionTime = dayjs.unix(action.timestamp);
+      const diffInSeconds = dayjs().diff(actionTime, 'second');
 
       if (Math.abs(diffInSeconds) > 10) {
-        console.warn('Trader 开仓操作已经过去了 10 秒钟，跳过', { diffInSeconds: diffInSeconds });
+        this.logger.warn(`Trader 开仓操作在 ${actionTime.fromNow()}， 超过了 10 秒钟, 跳过`, {
+          diffInSeconds: diffInSeconds,
+          actionTime: actionTime,
+        });
+
         return;
       }
 
@@ -158,11 +162,15 @@ export class GMXService {
         return;
       }
 
-      const givenTime = dayjs.unix(trade.closedPosition.timestamp);
-      const diffInSeconds = dayjs().diff(givenTime, 'second');
+      const actionTime = dayjs.unix(trade.closedPosition.timestamp);
+      const diffInSeconds = dayjs().diff(actionTime, 'second');
 
       if (Math.abs(diffInSeconds) > 10) {
-        console.warn('Trader 平仓操作已经过去了 10 秒钟，跳过', { diffInSeconds: diffInSeconds });
+        this.logger.warn(`Trader 平仓操作在 ${actionTime.fromNow()}， 超过了 10 秒钟， 跳过`, {
+          diffInSeconds: diffInSeconds,
+          actionTime: actionTime,
+        });
+
         return;
       }
 
@@ -202,11 +210,11 @@ export class GMXService {
         raw: trade,
       };
 
-      const givenTime = dayjs.unix(action.timestamp);
-      const diffInSeconds = dayjs().diff(givenTime, 'second');
+      const actionTime = dayjs.unix(action.timestamp);
+      const diffInSeconds = dayjs().diff(actionTime, 'second');
 
       if (Math.abs(diffInSeconds) > 10) {
-        console.warn('Trader 调仓操作已经过去了 10 秒钟', { diffInSeconds: diffInSeconds });
+        this.logger.warn(`Trader 调仓操作在 ${actionTime.fromNow()}， 超过了 10 秒钟`, { diffInSeconds: diffInSeconds, actionTime: actionTime });
 
         this.bnTradeListUpdate(bnTrade, actionList);
         this.logger.debug(`跳过，已更新 bnTradeList`, { bnTradeList: this.bnTradeList });

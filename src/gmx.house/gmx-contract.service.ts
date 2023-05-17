@@ -32,10 +32,10 @@ export class GMXContractService {
         indexTokens,
         isLong,
       );
-      console.log('开仓信息:', position);
+      this.logger.log('开仓信息:', position);
       // 在这里处理返回的开仓信息
     } catch (error) {
-      console.error('获取开仓信息时出错:', error);
+      this.logger.error('获取开仓信息时出错:', error);
     }
   }
 }
