@@ -41,6 +41,7 @@
     "ethers": "^6.3.0",
     "fast-array-diff": "^1.1.0",
     "lodash": "^4.17.21",
+    "logform": "^2.5.1",
     "nest-winston": "^1.9.2",
     "nestjs-telegraf": "^2.6.3",
     "reflect-metadata": "^0.1.13",

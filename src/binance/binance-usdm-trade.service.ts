@@ -24,7 +24,7 @@ export class BNService {
 
   private client: USDMClient;
 
-  constructor(private configService: ConfigService, private logger: Logger) {
+  constructor(private configService: ConfigService, private readonly logger: Logger) {
     const apiKey = configService.get<string>('BINANCE_FUTURE_API_KEY');
     const apiSecret = configService.get<string>('BINANCE_FUTURE_API_SCERET');
     const isProd = configService.get<string>('PROD') === 'true';

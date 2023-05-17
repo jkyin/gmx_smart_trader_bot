@@ -52,6 +52,9 @@ dependencies:
   lodash:
     specifier: ^4.17.21
     version: 4.17.21
+  logform:
+    specifier: ^2.5.1
+    version: 2.5.1
   nest-winston:
     specifier: ^1.9.2
     version: 1.9.2(@nestjs/common@9.4.0)(winston@3.8.2)

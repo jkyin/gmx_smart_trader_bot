@@ -108,14 +108,14 @@ export class AppService {
     });
 
     await ctx.reply('🕓监控中...');
-    this.logger.log('🕓监控中...');
+    this.logger.log('🕓监控中...', AppService.name);
   }
 
   @Command('stop_watch')
   async handleStopWatch(ctx: Context) {
     this.gmxService.stopWatch();
     await ctx.reply('✅已停止监控');
-    this.logger.log('✅已停止监控');
+    this.logger.log('✅已停止监控', AppService.name);
   }
 
   @Command('opened_positions')
@@ -167,7 +167,7 @@ export class AppService {
     const pair = event.trade.pair;
     const action = event.updateAction;
 
-    this.logger.log(`收到 ${symbol} 调仓信号`, { event: event });
+    this.logger.log(`收到 ${symbol} 调仓信号`, { event: event }, AppService.name);
 
     if (!action) {
       this.logger.error('需要有 event.updateAction, 但是没有值。');
@@ -177,16 +177,19 @@ export class AppService {
     const isIncreaseAction = action.__typename === 'IncreasePosition';
     const bnMarketPrice = (await this.bnService.pairMarketPrice())[pair];
     const isLong = rawTrade.isLong;
-    const factory = 10 ** GMX_DECIMALS;
+    const power = BigNumber(10).pow(GMX_DECIMALS);
 
-    const collateralDelta = BigNumber(action.collateralDelta).div(factory);
+    const collateralDelta = BigNumber(action.collateralDelta).div(power);
     const updateInfo = isIncreaseAction ? `已加仓 ${formatCurrency(collateralDelta)}` : `已减仓 ${formatCurrency(collateralDelta)}`;
     const position = this.displayInfo(rawTrade);
+
+    const relationDate = dayjs.unix(action.timestamp).fromNow();
+    const date = dayjs.tz(action.timestamp * 1000, 'Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
 
     const positionInfoFormatted = `
     🏦*当前 ${position.token} 仓位* 🏦
 
-    ⏰_${escapeTgSpecialChars(position.date)}   ${escapeTgSpecialChars(position.relationDate)}_⏰
+    ⏰_${escapeTgSpecialChars(date)}   ${escapeTgSpecialChars(relationDate)}_⏰
 
     🪙*${position.token}:*       ${escapeTgSpecialChars(position.isLong)}
     💰入场价:    ${position.entryPrice}
@@ -206,7 +209,7 @@ export class AppService {
       }
 
       const preferLeverage = BigNumber(leverage);
-      const preferMargin = this.getPreferMargin(position.collateral);
+      const preferMargin = this.getPreferMargin(collateralDelta);
 
       const quantity = await this.bnService.getQuantity(symbol, preferMargin, preferLeverage, bnMarketPrice);
 
@@ -279,9 +282,9 @@ export class AppService {
     const pair = event.trade.pair;
     const bnMarketPrice = (await this.bnService.pairMarketPrice())[pair];
     const isLong = rawTrade.isLong;
-    const factory = 10 ** GMX_DECIMALS;
-    const collateral = BigNumber(rawTrade.collateral).div(factory);
-    const size = BigNumber(rawTrade.size).div(factory);
+    const power = BigNumber(10).pow(GMX_DECIMALS);
+    const collateral = BigNumber(rawTrade.collateral).div(power);
+    const size = BigNumber(rawTrade.size).div(power);
     const leverage = size.div(collateral);
     const position = this.displayInfo(rawTrade);
 
@@ -379,7 +382,7 @@ export class AppService {
   }
 
   private displayInfo(trade: ITrade): TGBotPositionDisplayInfo {
-    const factory = 10 ** GMX_DECIMALS;
+    const factory = BigNumber(10).pow(GMX_DECIMALS);
 
     const timestamp = trade.timestamp * 1000;
     const token = TOKEN_SYMBOL.get(trade.indexToken.toLowerCase());

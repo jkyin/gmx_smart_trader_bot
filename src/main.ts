@@ -3,7 +3,8 @@ import { AppModule } from './app.module';
 import { getBotToken } from 'nestjs-telegraf';
 import { ConfigService } from '@nestjs/config';
 import winston from 'winston';
-import { utilities as nestWinstonModuleUtilities, WinstonModule } from 'nest-winston';
+import { WinstonModule } from 'nest-winston';
+import { utilities as nestWinstonModuleUtilities } from './common/winston.utilities';
 
 async function bootstrap() {
   process.env.TZ = 'Asia/Shanghai';
@@ -36,7 +37,6 @@ bootstrap();
 
 function configLogger() {
   const console = new winston.transports.Console({
-    level: 'debug',
     format: winston.format.combine(
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
       winston.format.ms(),

@@ -7,7 +7,7 @@ import { ReaderV2, ReaderV2__factory } from './contracts/types';
 export class GMXContractService {
   private readerV2Contract: ReaderV2;
 
-  constructor(private config: ConfigService, private logger: Logger) {
+  constructor(private config: ConfigService, private readonly logger: Logger) {
     const apiKey = config.get<string>('ALCHEMY_API_KEY');
     if (!apiKey) {
       throw new Error('no ethers alchemy api key.');
@@ -32,7 +32,7 @@ export class GMXContractService {
         indexTokens,
         isLong,
       );
-      this.logger.log('开仓信息:', position);
+      this.logger.log('开仓信息:', { position: position });
       // 在这里处理返回的开仓信息
     } catch (error) {
       this.logger.error('获取开仓信息时出错:', error);
