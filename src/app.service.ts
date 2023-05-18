@@ -226,13 +226,13 @@ export class AppService {
           return;
         }
 
-        this.logger.log(`[binance] 准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
+        this.logger.log(`准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`, { name: 'Binance' });
         const result = await this.bnService.increasePosition(pair, quantity, isLong);
-        this.logger.debug(`[binance] 加仓成功`, { result: result });
+        this.logger.debug(`加仓成功`, { name: 'Binance', result: result });
       } else {
-        this.logger.log(`[binance] 准备减仓仓， 减少保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
+        this.logger.log(`准备减仓仓， 减少保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`, { name: 'Binance' });
         const result = await this.bnService.decreasePosition(pair, quantity, isLong);
-        this.logger.debug(`[binance] 减仓成功`, { result: result });
+        this.logger.debug(`减仓成功`, { name: 'Binance', result: result });
       }
 
       const binanceMsg = isIncreaseAction
@@ -313,12 +313,12 @@ export class AppService {
       if (activePosition) {
         this.logger.debug(`已有${pair}仓位，跳过开仓`, { activePosition: activePosition });
       } else {
-        this.logger.log(`[binance] 准备设置${pair}初始杠杆为:${preferLeverage.toString()}`);
+        this.logger.log(`准备设置${pair}初始杠杆为:${preferLeverage.toString()}`, { name: 'Binance' });
         const result = await this.bnService.setLeverage(pair, preferLeverage.toNumber());
         this.logger.debug(result);
-        this.logger.log(`[binance] 准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
+        this.logger.log(`准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`, { name: 'Binance' });
         const result2 = await this.bnService.openPosition(pair, quantity, isLong);
-        this.logger.log(`[binance] 开仓成功`, { result2: result2 });
+        this.logger.log(`开仓成功`, { name: 'Binance', result2: result2 });
       }
 
       const reply = `
@@ -356,26 +356,26 @@ export class AppService {
   @OnEvent(POSITION_CLOSED)
   async handlePositionClosedEvent(event: TradeEvent) {
     const pair = event.trade.pair;
-    this.logger.log(`收到 ${pair} 平仓信号`, { event: event });
-    this.logger.log(`[binance] 处理 ${pair} 平仓`);
+    this.logger.log(`收到 ${pair} 平仓信号`, { name: 'Binance', event: event });
+    this.logger.log(`[开始处理 ${pair} 平仓`, { name: 'Binance' });
 
     const result = await this.bnService.closePosition(pair);
-    this.logger.log(`[binance] 已平仓`, { result: result });
+    this.logger.log(`已平仓`, { name: 'Binance', result: result });
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
   }
 
   @OnEvent(POSITION_CLOSED_ALL)
   async handlePositionClosedAllEvent(event: TradeEvent) {
-    this.logger.log('收到全部平仓信号');
-    this.logger.log('[binance] 处理全部平仓');
+    this.logger.log('收到全部平仓信号', { name: 'Binance' });
+    this.logger.log('开始处理全部平仓', { name: 'Binance' });
 
     const result = await this.bnService.closeAllPosition();
 
     if (result === undefined) {
-      this.logger.log('[binance] 不需要全部平仓，跳过');
+      this.logger.log('不需要全部平仓，跳过', { name: 'Binance', result: result });
     } else {
-      this.logger.log(`[binance] 已全部平仓`, { result: result });
+      this.logger.log(`已全部平仓`, { name: 'Binance', result: result });
 
       await this.replyWithMarkdown('🏦已全部平仓🏦');
     }
@@ -435,10 +435,14 @@ export class AppService {
 
   // 每次加仓数量。
   getPreferMargin(collateral: BigNumber) {
-    if (collateral.lte(3000)) {
+    if (collateral.lte(2000)) {
       return BigNumber(100);
-    } else if (collateral.lte(6000)) {
+    } else if (collateral.lte(3000)) {
+      return BigNumber(150);
+    } else if (collateral.lte(5000)) {
       return BigNumber(200);
+    } else if (collateral.lte(7000)) {
+      return BigNumber(250);
     } else if (collateral.lte(9000)) {
       return BigNumber(300);
     } else {

@@ -30,7 +30,7 @@ export class BNService {
     const isProd = configService.get<string>('PROD') === 'true';
     const useTestnet = isProd ? false : true;
 
-    logger.debug(`当前 binance 环境为 ${useTestnet ? 'testnet' : '正式服'}`);
+    logger.debug(`当前 binance 环境为 ${useTestnet ? 'testnet' : '正式服'}`, { name: 'Binance' });
 
     if (!apiKey) {
       throw new Error('no binance api key env');
@@ -217,7 +217,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.debug(`加/开仓`, { params: params });
+    this.logger.debug(`加/开仓`, { name: 'Binance', params: params });
 
     const result = await this.client.submitNewOrder(params);
     return result;
@@ -242,7 +242,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.debug(`减仓`, { params: params });
+    this.logger.debug(`减仓`, { name: 'Binance', params: params });
 
     const result = await this.client.submitNewOrder(params);
     return result;
@@ -256,7 +256,7 @@ export class BNService {
     const position = await this.getActiveFuturePositionInfo(pair);
 
     if (!position) {
-      this.logger.debug(`${pair} 仓位已平仓，跳过。`);
+      this.logger.debug(`${pair} 仓位已平仓，跳过。`, { name: 'Binance' });
       return;
     }
 
@@ -274,7 +274,7 @@ export class BNService {
     const positions = await this.getActiveFuturesPositions();
 
     if (positions.length == 0) {
-      this.logger.debug(`没有仓位，跳过。`);
+      this.logger.debug(`没有仓位，跳过。`, { name: 'Binance' });
       return;
     }
 
