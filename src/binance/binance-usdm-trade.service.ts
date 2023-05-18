@@ -20,7 +20,7 @@ export class BNService {
   private _pairMarketPriceStore: { [key: string]: BigNumber } = {};
   private _pairExchangeInfoStore: FuturesSymbolExchangeInfo[] = [];
 
-  private _allPositions: FuturesPosition[];
+  private _allPositions: FuturesPosition[] = [];
 
   private client: USDMClient;
 

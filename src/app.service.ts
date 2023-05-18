@@ -154,7 +154,7 @@ export class AppService {
     } catch (error) {
       this.logger.error(error);
       if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, error);
+        await this.bot.telegram.sendMessage(this.chatId, JSON.stringify(error));
       }
     }
   }
@@ -348,7 +348,7 @@ export class AppService {
     } catch (error) {
       this.logger.error(error);
       if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, error);
+        await this.bot.telegram.sendMessage(this.chatId, JSON.stringify(error));
       }
     }
   }
@@ -428,7 +428,7 @@ export class AppService {
     } catch (error) {
       this.logger.error(error);
       if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, error);
+        await this.bot.telegram.sendMessage(this.chatId, JSON.stringify(error));
       }
     }
   }
