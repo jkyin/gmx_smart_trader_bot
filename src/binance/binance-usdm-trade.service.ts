@@ -30,7 +30,7 @@ export class BNService {
     const isProd = configService.get<string>('PROD') === 'true';
     const useTestnet = isProd ? false : true;
 
-    logger.log(`当前 binance 环境为 ${useTestnet ? 'testnet' : '正式服'}`);
+    logger.debug(`当前 binance 环境为 ${useTestnet ? 'testnet' : '正式服'}`);
 
     if (!apiKey) {
       throw new Error('no binance api key env');

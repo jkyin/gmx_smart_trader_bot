@@ -37,12 +37,12 @@ bootstrap();
 
 function configLogger() {
   const console = new winston.transports.Console({
+    level: 'debug',
     format: winston.format.combine(
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
       winston.format.ms(),
       nestWinstonModuleUtilities.format.nestLike('GMX-Bot', {
         colors: true,
-        prettyPrint: true,
       }),
     ),
   });
@@ -54,17 +54,18 @@ function configLogger() {
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
       winston.format.ms(),
       nestWinstonModuleUtilities.format.nestLike('GMX-Bot', {
-        prettyPrint: true,
+        colors: false,
       }),
     ),
   });
   const combined = new winston.transports.File({
+    level: 'debug',
     filename: 'logs/combined.log',
     format: winston.format.combine(
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
       winston.format.ms(),
       nestWinstonModuleUtilities.format.nestLike('GMX-Bot', {
-        prettyPrint: true,
+        colors: false,
       }),
     ),
   });

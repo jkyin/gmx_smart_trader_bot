@@ -62,7 +62,7 @@ const nestLikeConsoleFormat = (
       }
     }
 
-    const formattedMeta = options.prettyPrint ? inspect(JSON.parse(stringifiedMeta), { colors: options.colors, depth: null }) : stringifiedMeta;
+    const formattedMeta = inspect(options.prettyPrint ? JSON.parse(stringifiedMeta) : stringifiedMeta, { colors: options.colors, depth: null });
 
     return (
       `${color(`[${appName}]`)} ` +
@@ -79,4 +79,10 @@ export const utilities = {
   format: {
     nestLike: nestLikeConsoleFormat,
   },
+};
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unreachable code error
+BigInt.prototype.toJSON = function (): number {
+  return this.toString();
 };
