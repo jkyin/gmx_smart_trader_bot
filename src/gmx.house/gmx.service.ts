@@ -11,6 +11,7 @@ import { dayjs } from 'src/common/day';
 
 @Injectable()
 export class GMXService {
+  private bnTradeTimeout = 60;
   // binance 交易所仓位
   private bnTradeList: CEXTrade[] = [];
   private _isWatching = false;
@@ -137,12 +138,16 @@ export class GMXService {
 
       if (bnTrade) {
         this.logger.warn(`特殊情况，想要开仓但 binance 已包含已包含 ${pair} 仓位. 跳过`, { name: GMXService.name });
+        this.bnTradeListOpen(symbol, trade, actionList, pair);
+        this.logger.debug(`已更新 bnTradeList`, { name: GMXService.name, bnTradeList: this.bnTradeList });
         this.logger.log('结束分析 trade open', { name: GMXService.name });
         return;
       }
 
       if (!action) {
         this.logger.warn(`${pair}异常情况，应该有 action，但是没有。 跳过`, { name: GMXService.name });
+        this.bnTradeListOpen(symbol, trade, actionList, pair);
+        this.logger.debug(`已更新 bnTradeList`, { name: GMXService.name, bnTradeList: this.bnTradeList });
         this.logger.log('结束分析 trade open', { name: GMXService.name });
         return;
       }
@@ -161,8 +166,8 @@ export class GMXService {
       const actionTime = dayjs.unix(action.timestamp);
       const diffInSeconds = dayjs().diff(actionTime, 'second');
 
-      if (Math.abs(diffInSeconds) > 10) {
-        this.logger.warn(`Trader ${pair} 开仓操作在 ${actionTime.fromNow()}， 超过了 10 秒钟, 跳过`, {
+      if (Math.abs(diffInSeconds) > this.bnTradeTimeout) {
+        this.logger.warn(`Trader ${pair} 开仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟, 跳过`, {
           name: GMXService.name,
           diffInSeconds: diffInSeconds,
           actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
@@ -188,8 +193,8 @@ export class GMXService {
       const actionTime = dayjs.unix(trade.closedPosition.timestamp);
       const diffInSeconds = dayjs().diff(actionTime, 'second');
 
-      if (Math.abs(diffInSeconds) > 10) {
-        this.logger.warn(`Trader 平仓操作在 ${actionTime.fromNow()}， 超过了 10 秒钟， 跳过`, {
+      if (Math.abs(diffInSeconds) > this.bnTradeTimeout) {
+        this.logger.warn(`Trader 平仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟， 跳过`, {
           name: GMXService.name,
           diffInSeconds: diffInSeconds,
           actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
@@ -250,8 +255,8 @@ export class GMXService {
       const actionTime = dayjs.unix(action.timestamp);
       const diffInSeconds = dayjs().diff(actionTime, 'second');
 
-      if (Math.abs(diffInSeconds) > 10) {
-        this.logger.warn(`Trader 调仓操作在 ${actionTime.fromNow()}， 超过了 10 秒钟`, {
+      if (Math.abs(diffInSeconds) > this.bnTradeTimeout) {
+        this.logger.warn(`Trader 调仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟`, {
           name: GMXService.name,
           diffInSeconds: diffInSeconds,
           actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
