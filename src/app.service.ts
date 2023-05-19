@@ -62,19 +62,12 @@ export class AppService {
     });
   }
 
-  @Hears('test1')
+  @Hears('testlog')
   hearsTest1(ctx: Context) {
     this.bnService
       .getActiveFuturesPositions()
       .then((value) => this.logger.debug(value))
       .catch((error) => this.logger.error('getFuturesPositions:', error));
-  }
-
-  @Hears('testSellETH')
-  async hearsTestSellAll() {
-    const result = await this.bnService.closePosition('ETHUSDT');
-
-    this.logger.debug(result);
   }
 
   @Command('status')
