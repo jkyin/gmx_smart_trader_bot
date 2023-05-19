@@ -9,7 +9,7 @@
     "build": "rimraf .graphclient && rimraf dist && npm run build:graphql && npm run typechain:generate && nest build",
     "build:graphql": "graphclient build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "start": "npm run build && npm run start:prod",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
@@ -95,5 +95,9 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "engines": {
+    "node": "~18.16.0",
+    "npm": "~9.5.1"
   }
 }
