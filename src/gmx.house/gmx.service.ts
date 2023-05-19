@@ -6,7 +6,7 @@ import * as _ from 'lodash';
 import { POSITION_CLOSED, POSITION_CLOSED_ALL, POSITION_OPEN, POSITION_UPDATED, TOKEN_SYMBOL } from 'src/common/constants';
 import { CEXTrade, GMXTrade, IPositionDecrease, IPositionIncrease, ITrade, TradeEvent } from 'src/interfaces/gmx.interface';
 import { getOrderedActionList, isTradeClosed, isTradeOpen } from 'src/middleware/gmx/gmx.middleware';
-import * as diff from 'fast-array-diff';
+import diff from 'fast-array-diff';
 import { dayjs } from 'src/common/day';
 
 @Injectable()
@@ -70,6 +70,8 @@ export class GMXService {
         const hasClosePosition = activeTrades.length > 0 && activeTrades.length < (this._lastQueryTrades ?? []).length;
 
         if (hasClosePosition) {
+          this.logger.log('监控发现 Trader 有新的平仓操作');
+
           // 某个仓位被关闭了。
           this.logger.log('开始分析 trade close', { name: GMXService.name });
           changes.removed.forEach((trade) => {
@@ -79,20 +81,20 @@ export class GMXService {
               return;
             }
 
+            this.logger.log('结束分析 trade close', { name: GMXService.name });
+
             const pair = symbol + 'USDT';
             this.notifyClosePosition(trade, symbol, pair);
-            this.logger.log('结束分析 trade close', { name: GMXService.name });
           });
         } else if (_.isEmpty(activeTrades) && hasChanges) {
           this.notifyCloseAllTrade();
         } else if (hasChanges) {
+          this.logger.log('监控发现 Trader 有新的调仓操作');
           this.logger.log(`开始分析 trade changes`, { name: GMXService.name });
 
           query.trades.forEach((trade) => {
             this.diffTrade(trade);
           });
-
-          this.logger.log(`结束分析 trade changes`, { name: GMXService.name });
         }
       }
 
