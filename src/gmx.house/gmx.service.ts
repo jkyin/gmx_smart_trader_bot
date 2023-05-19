@@ -6,7 +6,7 @@ import * as _ from 'lodash';
 import { POSITION_CLOSED, POSITION_CLOSED_ALL, POSITION_OPEN, POSITION_UPDATED, TOKEN_SYMBOL } from 'src/common/constants';
 import { CEXTrade, GMXTrade, IPositionDecrease, IPositionIncrease, ITrade, TradeEvent } from 'src/interfaces/gmx.interface';
 import { getOrderedActionList, isTradeClosed, isTradeOpen } from 'src/middleware/gmx/gmx.middleware';
-import diff from 'fast-array-diff';
+import * as diff from 'fast-array-diff';
 import { dayjs } from 'src/common/day';
 
 @Injectable()

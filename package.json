@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "pnpm build:graphql && pnpm typechain:generate && nest build",
+    "build": "rimraf .graphclient && rimraf dist && npm run build:graphql && npm run typechain:generate && nest build",
     "build:graphql": "graphclient build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -21,7 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "graphiql": "graphclient serve-dev",
     "typechain:generate": "typechain --target=ethers-v6 --out-dir src/gmx.house/contracts/types 'src/gmx.house/contracts/abis/*.json'",
-    "typechain:typecheck": "pnpm typechain:generate && tsc --noEmit"
+    "typechain:typecheck": "npm run typechain:generate && tsc --noEmit"
   },
   "dependencies": {
     "@nestjs/axios": "^2.0.0",
@@ -49,25 +49,8 @@
     "winston": "^3.8.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.21.8",
-    "@babel/preset-env": "^7.1.6",
-    "@envelop/core": "^2.4.2 || ^3.0.0",
     "@graphprotocol/client-cli": "^2.2.22",
-    "@graphprotocol/client-polling-live": "^1.1.1",
     "@graphql-eslint/eslint-plugin": "^3.18.0",
-    "@graphql-mesh/cache-localforage": "^0.93.1",
-    "@graphql-mesh/cross-helpers": "^0.3.4",
-    "@graphql-mesh/graphql": "^0.93.1",
-    "@graphql-mesh/http": "^0.93.2",
-    "@graphql-mesh/merger-bare": "^0.93.1",
-    "@graphql-mesh/runtime": "^0.93.2",
-    "@graphql-mesh/store": "^0.93.1",
-    "@graphql-mesh/types": ">=0.93.1 <0.94.0",
-    "@graphql-mesh/utils": ">=0.93.1 <0.94.0",
-    "@graphql-tools/delegate": ">=9.0.32 <10.0.0",
-    "@graphql-tools/merge": "^8.3.14",
-    "@graphql-tools/utils": ">=9.2.1 <10.0.0",
-    "@graphql-tools/wrap": ">=9.4.2 <10.0.0",
     "@nestjs/cli": "^9.5.0",
     "@nestjs/schematics": "^9.2.0",
     "@nestjs/testing": "^9.4.1",
@@ -78,16 +61,13 @@
     "@types/supertest": "^2.0.12",
     "@typescript-eslint/eslint-plugin": "^5.59.6",
     "@typescript-eslint/parser": "^5.59.6",
-    "@whatwg-node/fetch": "^0.9.0",
     "eslint": "^8.40.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "graphql": ">=15.2.0 <16.0.0 || >=16.0.0 <17.0.0",
-    "graphql-tag": "^2.0.0",
     "jest": "29.5.0",
     "prettier": "^2.8.8",
     "react": "18.2.0",
-    "react-native": "*",
+    "rimraf": "^5.0.1",
     "rxjs": ">=7.2.0 <8.0.0",
     "source-map-support": "^0.5.21",
     "supertest": "^6.3.3",
@@ -97,8 +77,7 @@
     "tsconfig-paths": "4.2.0",
     "tslib": ">=2.4.0 <3.0.0",
     "typechain": "^8.1.1",
-    "typescript": "^4.9.5",
-    "webpack": "^5.82.1"
+    "typescript": "^4.9.5"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -116,42 +95,5 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  },
-  "peerDependencies": {
-    "@babel/core": "^7.21.8",
-    "@babel/preset-env": "^7.1.6",
-    "@envelop/core": "^2.4.2 || ^3.0.0",
-    "@graphprotocol/client-polling-live": "^1.1.1",
-    "@graphql-mesh/cache-localforage": "^0.93.1",
-    "@graphql-mesh/cross-helpers": "^0.3.4",
-    "@graphql-mesh/graphql": "^0.93.1",
-    "@graphql-mesh/http": "^0.93.2",
-    "@graphql-mesh/merger-bare": "^0.93.1",
-    "@graphql-mesh/runtime": "^0.93.2",
-    "@graphql-mesh/store": "^0.93.1",
-    "@graphql-mesh/types": ">=0.93.1 <0.94.0",
-    "@graphql-mesh/utils": ">=0.93.1 <0.94.0",
-    "@graphql-tools/delegate": ">=9.0.32 <10.0.0",
-    "@graphql-tools/merge": "^8.3.14",
-    "@graphql-tools/utils": ">=9.2.1 <10.0.0",
-    "@graphql-tools/wrap": ">=9.4.2 <10.0.0",
-    "@whatwg-node/fetch": "^0.9.0",
-    "graphql": ">=15.2.0 <16.0.0 || >=16.0.0 <17.0.0",
-    "graphql-tag": "^2.0.0",
-    "react": "18.2.0",
-    "react-native": "*",
-    "rxjs": ">=7.2.0 <8.0.0",
-    "tslib": ">=2.4.0 <3.0.0",
-    "webpack": "^5.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "braces@<2.3.1": ">=2.3.1",
-      "hermes-engine@<=0.9.0": ">=0.10.0",
-      "hermes-engine@<=0.7.2": ">=0.8.0",
-      "json5@<1.0.2": ">=1.0.2",
-      "glob-parent@<5.1.2": ">=5.1.2",
-      "shell-quote@<=1.7.2": ">=1.7.3"
-    }
   }
 }

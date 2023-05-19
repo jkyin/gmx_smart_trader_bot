@@ -69,17 +69,26 @@ export class BNService {
   // 立马执行，然后每2秒间隔。
   @Cron('2 * * * *')
   private async fetchUSDTBalance() {
-    const result = await this.client.getBalance();
-    const balance = _.find(result, { asset: 'USDT' });
-    this._usdtBalance = balance;
+    try {
+      const result = await this.client.getBalance();
+      const balance = _.find(result, { asset: 'USDT' });
+      this._usdtBalance = balance;
+    } catch (error) {
+      this.logger.error(error);
+    }
   }
 
   async allPositions() {
-    if (this._allPositions.length === 0) {
-      await this.getActiveFuturesPositions();
-    }
+    try {
+      if (this._allPositions.length === 0) {
+        await this.getActiveFuturesPositions();
+      }
 
-    return this._allPositions;
+      return this._allPositions;
+    } catch (error) {
+      this.logger.error(error);
+      return [];
+    }
   }
 
   getMultiAssetsMode() {
@@ -89,19 +98,23 @@ export class BNService {
   // 立马执行，然后每秒间隔。
   @Cron('* * * * *')
   private async getPairsMarketPrice() {
-    const prices = PAIR_OF_INTEREST.map((pair) => {
-      return this.client.getSymbolPriceTicker({
-        symbol: pair,
-      }) as Promise<SymbolPrice>;
-    });
+    try {
+      const prices = PAIR_OF_INTEREST.map((pair) => {
+        return this.client.getSymbolPriceTicker({
+          symbol: pair,
+        }) as Promise<SymbolPrice>;
+      });
 
-    const result = await Promise.allSettled(prices);
-    result.forEach((settled) => {
-      if (settled.status == 'fulfilled') {
-        const value = settled.value;
-        this._pairMarketPriceStore[value.symbol] = BigNumber(value.price);
-      }
-    });
+      const result = await Promise.allSettled(prices);
+      result.forEach((settled) => {
+        if (settled.status == 'fulfilled') {
+          const value = settled.value;
+          this._pairMarketPriceStore[value.symbol] = BigNumber(value.price);
+        }
+      });
+    } catch (error) {
+      this.logger.error(error);
+    }
   }
 
   // 立马执行，然后每小时间隔。
