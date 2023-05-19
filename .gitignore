@@ -2,7 +2,7 @@
 /dist
 /node_modules
 /src/gmx.house/contracts/types
-.graphclient/*
+.graphclient
 
 # Logs
 logs
@@ -36,11 +36,21 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv
-.env*
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
 
 # pnpm
 .pnpm
 .pnpm-store
 .pnpm-workspace.yaml
 .vercel
+
+# Optional npm cache directory
+.npm
+
+# Output of 'npm pack'
+*.tgz
