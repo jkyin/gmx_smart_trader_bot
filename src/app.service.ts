@@ -64,10 +64,10 @@ export class AppService {
 
   @Hears('testlog')
   hearsTest1(ctx: Context) {
-    this.bnService
-      .getActiveFuturesPositions()
-      .then((value) => this.logger.debug(value))
-      .catch((error) => this.logger.error('getFuturesPositions:', error));
+    this.logger.log('Calling getHello()', 'Logger');
+    this.logger.debug('Calling getHello()', 'Logger');
+    this.logger.verbose('Calling getHello()', 'Logger');
+    this.logger.warn('Calling getHello()', 'Logger');
   }
 
   @Command('status')

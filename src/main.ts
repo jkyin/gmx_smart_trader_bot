@@ -37,7 +37,7 @@ bootstrap();
 
 function configLogger() {
   const console = new winston.transports.Console({
-    level: 'debug',
+    level: 'info',
     format: winston.format.combine(
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
       winston.format.ms(),
