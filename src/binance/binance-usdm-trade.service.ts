@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   USDMClient,
   FuturesPosition,
@@ -13,9 +13,13 @@ import BigNumber from 'bignumber.js';
 import { Cron } from '@nestjs/schedule';
 import * as _ from 'lodash';
 import { ConfigService } from '@nestjs/config';
+import winston from 'winston';
+import { createWinstonLogger } from 'src/common/winston-config.service';
 
 @Injectable()
 export class BNService {
+  private logger: winston.Logger;
+
   private _usdtBalance: FuturesAccountBalance | undefined;
   private _pairMarketPriceStore: { [key: string]: BigNumber } = {};
   private _pairExchangeInfoStore: FuturesSymbolExchangeInfo[] = [];
@@ -24,13 +28,15 @@ export class BNService {
 
   private client: USDMClient;
 
-  constructor(private configService: ConfigService, private readonly logger: Logger) {
+  constructor(private configService: ConfigService) {
+    this.logger = createWinstonLogger({ service: BNService.name });
+
     const apiKey = configService.get<string>('BINANCE_FUTURE_API_KEY');
     const apiSecret = configService.get<string>('BINANCE_FUTURE_API_SCERET');
     const isProd = configService.get<string>('PROD') === 'true';
     const useTestnet = isProd ? false : true;
 
-    logger.debug(`当前 binance 环境为 ${useTestnet ? 'testnet' : '正式服'}`, { name: 'Binance' });
+    this.logger.info(`当前 binance 环境为 ${useTestnet ? 'testnet' : '正式服'}`, { useTestnet });
 
     if (!apiKey) {
       throw new Error('no binance api key env');
@@ -79,20 +85,15 @@ export class BNService {
   }
 
   async allPositions() {
-    try {
-      if (this._allPositions.length === 0) {
-        await this.getActiveFuturesPositions();
-      }
-
-      return this._allPositions;
-    } catch (error) {
-      this.logger.error(error);
-      return [];
+    if (this._allPositions.length === 0) {
+      await this.getActiveFuturesPositions();
     }
+
+    return this._allPositions;
   }
 
-  getMultiAssetsMode() {
-    return this.client.getMultiAssetsMode();
+  async getMultiAssetsMode() {
+    return await this.client.getMultiAssetsMode();
   }
 
   // 立马执行，然后每秒间隔。
@@ -120,8 +121,12 @@ export class BNService {
   // 立马执行，然后每小时间隔。
   @Cron('* */1 * * *')
   private async getExchangeInfo() {
-    const exchangeInfo = await this.client.getExchangeInfo();
-    this._pairExchangeInfoStore = exchangeInfo.symbols;
+    try {
+      const exchangeInfo = await this.client.getExchangeInfo();
+      this._pairExchangeInfoStore = exchangeInfo.symbols;
+    } catch (error) {
+      this.logger.error(error);
+    }
   }
 
   async getQuantityPrecision(symbol: string, quoteAsset = 'USDT') {
@@ -133,7 +138,7 @@ export class BNService {
     const info = this._pairExchangeInfoStore.find((item) => item.symbol === pair);
     const precision = info?.quantityPrecision;
     if (precision === undefined) {
-      return new Error(`no ${pair} quantityPrecision found`);
+      throw new Error(`no ${pair} quantityPrecision found`);
     }
 
     return precision;
@@ -148,7 +153,7 @@ export class BNService {
     const info = this._pairExchangeInfoStore.find((item) => item.symbol === pair);
     const precision = info?.quotePrecision;
     if (precision === undefined) {
-      return new Error(`no ${pair} quotePrecision found`);
+      throw new Error(`no ${pair} quotePrecision found`);
     }
 
     return precision;
@@ -165,10 +170,6 @@ export class BNService {
   //           表示某个 symbol 最大支持的精度，如果下单时传入的 quantity 精度超过了要求，会报错误码 1111。
   async getQuantity(symbol: string, usdtMagin: BigNumber, leverage: BigNumber, entryPrice: BigNumber) {
     const precision = await this.getQuantityPrecision(symbol);
-    if (precision instanceof Error) {
-      throw precision;
-    }
-
     return usdtMagin.multipliedBy(leverage).dividedBy(entryPrice).dp(precision);
   }
 
@@ -176,10 +177,6 @@ export class BNService {
   // 目前只用于通过增加保证金，降低合约杠杆倍数。
   async getMarginAmount(symbol: string, price: BigNumber, quantity: BigNumber, targetLeverage: BigNumber) {
     const precision = await this.getQuotePrecision(symbol);
-    if (precision instanceof Error) {
-      throw precision;
-    }
-
     return quantity.multipliedBy(price).dividedBy(targetLeverage).dp(precision);
   }
 
@@ -215,12 +212,12 @@ export class BNService {
   }
 
   async openPosition(pair: string, quantity: BigNumber, isLong: boolean) {
-    return this.increasePosition(pair, quantity, isLong);
+    return await this.increasePosition(pair, quantity, isLong);
   }
 
   async increasePosition(pair: string, quantity: BigNumber, isLong: boolean) {
     if (pair.length == 0) {
-      return new Error(`参数错误： 没有 pair ${pair}`);
+      throw new Error(`参数错误： 没有 pair ${pair}`);
     }
 
     const params: NewFuturesOrderParams = {
@@ -230,7 +227,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.debug(`加/开仓`, { name: 'Binance', params: params });
+    this.logger.info(`提交加仓/开仓新订单`, { params: params });
 
     const result = await this.client.submitNewOrder(params);
     return result;
@@ -238,13 +235,13 @@ export class BNService {
 
   async decreasePosition(pair: string, quantity: BigNumber, isLong: boolean) {
     if (pair.length == 0) {
-      return new Error(`参数错误： 没有 pair ${pair}`);
+      throw new Error(`参数错误： 没有 pair ${pair}`);
     }
 
     const position = await this.getActiveFuturePositionInfo(pair);
 
     if (!position) {
-      this.logger.debug(`没有 ${pair} 仓位，跳过。`);
+      this.logger.info(`想要减仓 ${pair} ，但没有建仓，跳过。`, { pair: pair });
       return;
     }
 
@@ -255,7 +252,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.debug(`减仓`, { name: 'Binance', params: params });
+    this.logger.info(`提交减仓订单`, { params: params });
 
     const result = await this.client.submitNewOrder(params);
     return result;
@@ -263,13 +260,13 @@ export class BNService {
 
   async closePosition(pair: string) {
     if (pair.length == 0) {
-      return new Error(`参数错误： 没有 pair ${pair}`);
+      throw new Error(`参数错误： 没有 pair ${pair}`);
     }
 
     const position = await this.getActiveFuturePositionInfo(pair);
 
     if (!position) {
-      this.logger.debug(`${pair} 仓位已平仓，跳过。`, { name: 'Binance' });
+      this.logger.info(`${pair} 仓位已平仓，跳过。`, { pair: pair });
       return;
     }
 
@@ -279,29 +276,32 @@ export class BNService {
       quantity: BigNumber(position.positionAmt).absoluteValue().toNumber(),
       type: 'MARKET',
     };
-    const result = await this.client.submitNewOrder(params);
-    return result;
+
+    this.logger.info(`提交平仓新订单`, { params: params });
+
+    return await this.client.submitNewOrder(params);
   }
 
   async closeAllPosition() {
     const positions = await this.getActiveFuturesPositions();
 
     if (positions.length == 0) {
-      this.logger.debug(`没有仓位，跳过。`, { name: 'Binance' });
+      this.logger.info(`想要批量平仓，但没有所需仓位，跳过。`);
       return;
     }
 
     const orders = positions.map((position) => {
-      const params: NewFuturesOrderParams = {
+      const params: NewFuturesOrderParams<string> = {
         symbol: position.symbol,
         side: Number(position.positionAmt) < 0 ? 'BUY' : 'SELL',
-        quantity: BigNumber(position.positionAmt).absoluteValue().toNumber(),
+        quantity: BigNumber(position.positionAmt).absoluteValue().toString(),
         type: 'MARKET',
       };
-
-      return this.client.submitNewOrder(params);
+      return params;
     });
 
-    return Promise.allSettled(orders);
+    this.logger.info(`提交批量平仓新订单`, { orders: orders });
+
+    return await this.client.submitMultipleOrders(orders);
   }
 }

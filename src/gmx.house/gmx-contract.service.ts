@@ -1,13 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
 import { ReaderV2, ReaderV2__factory } from './contracts/types';
+import winston from 'winston';
+import { createWinstonLogger } from 'src/common/winston-config.service';
 
 @Injectable()
 export class GMXContractService {
+  private logger: winston.Logger;
+
   private readerV2Contract: ReaderV2;
 
-  constructor(private config: ConfigService, private readonly logger: Logger) {
+  constructor(private config: ConfigService) {
+    this.logger = createWinstonLogger({ service: GMXContractService.name });
     const apiKey = config.get<string>('ALCHEMY_API_KEY');
     if (!apiKey) {
       throw new Error('no ethers alchemy api key.');
@@ -25,14 +30,8 @@ export class GMXContractService {
       const collateralTokens = ['0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f'];
       const indexTokens = ['0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f'];
       const isLong = [true];
-      const position = await this.readerV2Contract.getPositions(
-        vault,
-        '0xe2823659be02e0f48a4660e4da008b5e1abfdf29',
-        collateralTokens,
-        indexTokens,
-        isLong,
-      );
-      this.logger.log('开仓信息:', { position: position });
+      const position = await this.readerV2Contract.getPositions(vault, account, collateralTokens, indexTokens, isLong);
+      this.logger.info('开仓信息:', { position: position });
       // 在这里处理返回的开仓信息
     } catch (error) {
       this.logger.error('获取开仓信息时出错:', error);

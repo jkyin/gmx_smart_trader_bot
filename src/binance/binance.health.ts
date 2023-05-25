@@ -13,11 +13,7 @@ export class BinanceHealthIndicator extends HealthIndicator {
       await this.bnService.getMultiAssetsMode();
       return this.getStatus('binance-future-api', true, { isProd: process.env.PROD });
     } catch (error) {
-      if (error instanceof Error) {
-        return this.getStatus('binance-future-api', false, { message: error.message, isProd: process.env.PROD });
-      } else {
-        return this.getStatus('binance-future-api', false, { message: JSON.stringify(error), isProd: process.env.PROD });
-      }
+      return this.getStatus('binance-future-api', false, { message: (error as Error).message, isProd: process.env.PROD });
     }
   }
 }

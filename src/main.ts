@@ -2,22 +2,17 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { getBotToken } from 'nestjs-telegraf';
 import { ConfigService } from '@nestjs/config';
-import winston from 'winston';
-import { WinstonModule } from 'nest-winston';
-import { utilities as nestWinstonModuleUtilities } from './common/winston.utilities';
+import { createWinstonLogger } from './common/winston-config.service';
 
 async function bootstrap() {
   process.env.TZ = 'Asia/Shanghai';
+  const logger = createWinstonLogger();
 
-  const logger = configLogger();
-  const app = await NestFactory.create(AppModule, {
-    logger: logger,
-  });
+  const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
   const webhookPath = configService.get<string>('WEBHOOK_PATH');
   const port = configService.get<number>('PORT');
-  const tg = configService.get<string>('TELEGRAM_BOT_TOKEN');
 
   if (!webhookPath) {
     throw new Error('no webhookPath env.');
@@ -34,46 +29,3 @@ async function bootstrap() {
 }
 
 bootstrap();
-
-function configLogger() {
-  const console = new winston.transports.Console({
-    level: 'info',
-    format: winston.format.combine(
-      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
-      winston.format.ms(),
-      nestWinstonModuleUtilities.format.nestLike('GMX-Bot', {
-        colors: true,
-      }),
-    ),
-  });
-
-  const error = new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-    format: winston.format.combine(
-      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
-      winston.format.ms(),
-      nestWinstonModuleUtilities.format.nestLike('GMX-Bot', {
-        colors: false,
-      }),
-    ),
-  });
-  const combined = new winston.transports.File({
-    level: 'debug',
-    filename: 'logs/combined.log',
-    format: winston.format.combine(
-      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
-      winston.format.ms(),
-      nestWinstonModuleUtilities.format.nestLike('GMX-Bot', {
-        colors: false,
-      }),
-    ),
-  });
-  const logger = WinstonModule.createLogger({
-    // options (same as WinstonModule.forRoot() options)
-    transports: [console, error, combined],
-    exceptionHandlers: [new winston.transports.File({ filename: 'logs/exceptions.log' })],
-    rejectionHandlers: [new winston.transports.File({ filename: 'logs/rejections.log' })],
-  });
-  return logger;
-}

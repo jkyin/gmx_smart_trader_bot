@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { Command, Hears, Help, InjectBot, Start, Update } from 'nestjs-telegraf';
 import { Context, Telegraf } from 'telegraf';
 import { GMXService } from './gmx.house/gmx.service';
@@ -10,19 +10,22 @@ import { TradeEvent, TGBotPositionDisplayInfo, ITrade } from './interfaces/gmx.i
 import BigNumber from 'bignumber.js';
 import { BNService } from './binance/binance-usdm-trade.service';
 import { dayjs } from './common/day';
+import { createWinstonLogger } from './common/winston-config.service';
+import winston from 'winston';
 
 @Update()
 @Injectable()
-export class AppService {
+export class AppService implements OnApplicationBootstrap {
+  private logger: winston.Logger;
   private chatId: string | number | undefined;
 
-  constructor(
-    private readonly gmxService: GMXService,
-    private readonly bnService: BNService,
+  constructor(private readonly gmxService: GMXService, private readonly bnService: BNService, @InjectBot() private readonly bot: Telegraf<Context>) {
+    this.logger = createWinstonLogger({ service: AppService.name });
+  }
 
-    private readonly logger: Logger,
-    @InjectBot() private readonly bot: Telegraf<Context>,
-  ) {}
+  onApplicationBootstrap() {
+    this.logger.info('程序已启动');
+  }
 
   @Start()
   async startCommand(ctx: Context) {
@@ -34,7 +37,7 @@ export class AppService {
     await ctx.reply('Tell me.');
   }
 
-  @Hears('test')
+  @Hears('testmessageformat')
   async hearsTest(ctx: Context) {
     const reply = markdownV2Example;
     const currency = escapeTgSpecialChars(formatCurrency(BigNumber(12345)));
@@ -63,11 +66,17 @@ export class AppService {
   }
 
   @Hears('testlog')
-  hearsTest1(ctx: Context) {
-    this.logger.log('Calling getHello()', 'Logger');
-    this.logger.debug('Calling getHello()', 'Logger');
-    this.logger.verbose('Calling getHello()', 'Logger');
-    this.logger.warn('Calling getHello()', 'Logger');
+  hearsTestlog(ctx: Context) {
+    this.logger.info('Calling getHello()', { botInfo: ctx.botInfo });
+    this.logger.debug('Calling getHello()', { botInfo: ctx.botInfo });
+    this.logger.verbose('Calling getHello()', { botInfo: ctx.botInfo });
+    this.logger.warn('Calling getHello()', { botInfo: ctx.botInfo });
+
+    try {
+      throw new Error();
+    } catch (e) {
+      this.logger.error('Calling getHello()', e, { botInfo: ctx.botInfo });
+    }
   }
 
   @Command('status')
@@ -79,7 +88,9 @@ export class AppService {
   @Command('start_watch')
   async handleStartWatch(ctx: Context) {
     if (this.gmxService.isWatching) {
-      await ctx.reply('🟢正在监控中，无需重复开启，跳过。');
+      const msg = '🟢正在监控中，无需重复开启，跳过。';
+      this.logger.info(msg);
+      await ctx.reply(msg);
       return;
     }
 
@@ -96,33 +107,31 @@ export class AppService {
     ).catch(async (error) => {
       this.gmxService.stopWatch();
 
-      if (error instanceof Error) {
-        const msg = `发生了错误： ${error.message}， 🔴已停止监控。`;
-        this.logger.error(msg, error.stack);
-        await ctx.reply(msg);
-      } else {
-        const msg = `发生了错误： ${JSON.stringify(error)}， 🔴已停止监控。`;
-        this.logger.error(msg);
-        await ctx.reply(msg);
-      }
+      const msg = `发生了错误： ${error.message}， 🔴已停止监控。`;
+      this.logger.error(msg, error);
+      await ctx.reply(msg);
     });
 
-    await ctx.reply('🕓监控中...');
-    this.logger.log('🕓监控中...', AppService.name);
+    const msg = '✅启动成功，监控中...';
+    await ctx.reply(msg);
+    this.logger.info(msg);
   }
 
   @Command('stop_watch')
   async handleStopWatch(ctx: Context) {
     this.gmxService.stopWatch();
-    await ctx.reply('✅已停止监控');
-    this.logger.log('✅已停止监控', AppService.name);
+    const msg = '✅已停止监控';
+    await ctx.reply(msg);
+    this.logger.info(msg);
   }
 
   @Command('opened_positions')
   async openedPositions(ctx: Context) {
     const trades = this.gmxService.activeTrades;
     if (trades === undefined) {
-      await ctx.reply('🟡 没有运行中的任务，所以没有自动开启的仓位');
+      const msg = '🟡 没有运行中的任务，所以没有自动开启的仓位';
+      this.logger.info(msg);
+      await ctx.reply(msg);
       return;
     }
 
@@ -152,9 +161,9 @@ export class AppService {
         });
       }
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error('开仓发生错误', error);
       if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, JSON.stringify(error));
+        await this.bot.telegram.sendMessage(this.chatId, (error as Error).message);
       }
     }
   }
@@ -167,10 +176,10 @@ export class AppService {
     const pair = event.trade.pair;
     const action = event.updateAction;
 
-    this.logger.log(`收到 ${symbol} 调仓信号`, { event: event }, AppService.name);
+    this.logger.info(`收到 ${symbol} 调仓信号`, { event: event });
 
     if (!action) {
-      this.logger.error('需要有 event.updateAction, 但是没有值。');
+      this.logger.warn('需要有 event.updateAction, 但是没有值。', { event: event });
       return;
     }
 
@@ -204,7 +213,7 @@ export class AppService {
     try {
       const leverage = (await this.bnService.getActiveFuturePositionInfo(pair))?.leverage;
       if (!leverage) {
-        this.logger.warn(`想要调仓，但是 bnService.getActiveFuturePositionInfo(${pair}))?.leverage 结果为 ${leverage}`);
+        this.logger.warn(`想要调仓，但是 leverage 结果为 ${leverage}`, { pair: pair });
         return;
       }
 
@@ -217,22 +226,22 @@ export class AppService {
         const balance = await this.bnService.usdtBalance();
 
         if (balance?.availableBalance === undefined) {
-          this.logger.warn('想要加仓，但是余额不足', { availableBalance: balance?.availableBalance });
+          this.logger.warn('想要加仓，但是余额不足', { balance: balance });
           return;
         }
 
         if (BigNumber(balance.availableBalance).isLessThan(preferMargin)) {
-          this.logger.warn('想要加仓，但是余额不足 availableBalance', { availableBalance: balance.availableBalance });
+          this.logger.warn('想要加仓，但是余额不足', { balance: balance });
           return;
         }
 
-        this.logger.log(`准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`, { name: 'Binance' });
+        this.logger.info(`准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.increasePosition(pair, quantity, isLong);
-        this.logger.debug(`加仓成功`, { name: 'Binance', result: result });
+        this.logger.info(`加仓成功`, { result: result });
       } else {
-        this.logger.log(`准备减仓仓， 减少保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`, { name: 'Binance' });
+        this.logger.info(`准备减仓仓， 减少保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.decreasePosition(pair, quantity, isLong);
-        this.logger.debug(`减仓成功`, { name: 'Binance', result: result });
+        this.logger.info(`减仓成功`, { result: result });
       }
 
       const binanceMsg = isIncreaseAction
@@ -264,12 +273,12 @@ export class AppService {
           disable_web_page_preview: true,
         });
 
-        this.logger.log('成功调仓');
+        this.logger.info('成功调仓');
       }
     } catch (error) {
       this.logger.error(error);
       if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, JSON.stringify(error));
+        await this.bot.telegram.sendMessage(this.chatId, (error as Error).message);
       }
     }
   }
@@ -288,7 +297,7 @@ export class AppService {
     const leverage = size.div(collateral);
     const position = this.displayInfo(rawTrade);
 
-    this.logger.log(`收到 ${symbol} 开仓信号`, { event: event });
+    this.logger.info(`收到 ${symbol} 开仓信号`, { event: event });
 
     const positionInfoFormatted = `
     🏦*当前 ${position.token} 仓位* 🏦
@@ -311,14 +320,14 @@ export class AppService {
       const activePosition = await this.bnService.getActiveFuturePositionInfo(pair);
 
       if (activePosition) {
-        this.logger.debug(`已有 ${pair} 仓位，跳过开仓`, { activePosition: activePosition });
+        this.logger.info(`已有 ${pair} 仓位，跳过开仓`, { activePosition: activePosition });
       } else {
-        this.logger.log(`准备设置 ${pair} 初始杠杆为:${preferLeverage.toString()}`, { name: 'Binance' });
+        this.logger.info(`准备设置 ${pair} 初始杠杆为:${preferLeverage.toString()}`);
         const result = await this.bnService.setLeverage(pair, preferLeverage.toNumber());
-        this.logger.debug('设置初始杠杆成功', { name: 'Binance', result: result });
-        this.logger.log(`准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`, { name: 'Binance' });
+        this.logger.info('设置初始杠杆成功', { result: result });
+        this.logger.info(`准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result2 = await this.bnService.openPosition(pair, quantity, isLong);
-        this.logger.log(`开仓成功`, { name: 'Binance', result2: result2 });
+        this.logger.info(`开仓成功`, { result2: result2 });
       }
 
       const reply = `
@@ -348,7 +357,7 @@ export class AppService {
     } catch (error) {
       this.logger.error(error);
       if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, JSON.stringify(error));
+        await this.bot.telegram.sendMessage(this.chatId, (error as Error).message);
       }
     }
   }
@@ -356,26 +365,26 @@ export class AppService {
   @OnEvent(POSITION_CLOSED)
   async handlePositionClosedEvent(event: TradeEvent) {
     const pair = event.trade.pair;
-    this.logger.log(`收到 ${pair} 平仓信号`, { name: 'Binance', event: event });
-    this.logger.log(`开始处理 ${pair} 平仓`, { name: 'Binance' });
+    this.logger.info(`收到 ${pair} 平仓信号`, { event: event });
+    this.logger.info(`开始处理 ${pair} 平仓`);
 
     const result = await this.bnService.closePosition(pair);
-    this.logger.log(`已平仓`, { name: 'Binance', result: result });
+    this.logger.info(`已平仓`, { result: result });
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
   }
 
   @OnEvent(POSITION_CLOSED_ALL)
   async handlePositionClosedAllEvent(event: TradeEvent) {
-    this.logger.log('收到全部平仓信号', { name: 'Binance' });
-    this.logger.log('开始处理全部平仓', { name: 'Binance' });
+    this.logger.info('收到全部平仓信号', { event: event });
+    this.logger.info('开始处理全部平仓');
 
     const result = await this.bnService.closeAllPosition();
 
     if (result === undefined) {
-      this.logger.log('不需要全部平仓，跳过', { name: 'Binance', result: result });
+      this.logger.info('不需要全部平仓，跳过', { result: result });
     } else {
-      this.logger.log(`已全部平仓`, { name: 'Binance', result: result });
+      this.logger.info(`已全部平仓`, { result: result });
 
       await this.replyWithMarkdown('🏦已全部平仓🏦');
     }
@@ -426,31 +435,25 @@ export class AppService {
         });
       }
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(text, error);
       if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, JSON.stringify(error));
+        await this.bot.telegram.sendMessage(this.chatId, (error as Error).message);
       }
     }
   }
 
   // 每次加仓数量。
   getPreferMargin(collateral: BigNumber) {
-    if (collateral.lte(2000)) {
-      return BigNumber(100);
-    } else if (collateral.lte(3000)) {
-      return BigNumber(150);
-    } else if (collateral.lte(5000)) {
-      return BigNumber(200);
-    } else if (collateral.lte(7000)) {
-      return BigNumber(250);
-    } else if (collateral.lte(9000)) {
-      return BigNumber(300);
+    if (collateral.lte(7000)) {
+      return collateral.div(10).integerValue(BigNumber.ROUND_CEIL);
+    } else if (collateral.lte(10000)) {
+      return BigNumber(800);
     } else {
-      return BigNumber(500);
+      return BigNumber(1000);
     }
   }
 
   getPreferLeverage(leverage: BigNumber) {
-    return BigNumber.minimum(15, leverage.plus(2));
+    return BigNumber.minimum(21, leverage.plus(1));
   }
 }

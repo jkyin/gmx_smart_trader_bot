@@ -1,4 +1,4 @@
-import { Logger, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TelegrafModule } from 'nestjs-telegraf';
@@ -36,6 +36,6 @@ import { HealthModule } from './health/health.module';
     HealthModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [Logger, AppService, Telegraf],
+  providers: [AppService, Telegraf],
 })
 export class AppModule {}
