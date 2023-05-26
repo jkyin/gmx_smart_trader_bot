@@ -125,20 +125,20 @@ export class GMXService {
     const pair = symbol + 'USDT';
     const bnTrade = _.find(this.bnTradeList, { symbol: symbol });
 
-    this.logger.info(`开始处理 diffTrade`, { pair: pair });
+    this.logger.info(`${pair} 开始处理 diffTrade`, { pair: pair });
     this.logger.debug(`当前 bnTradeList`, { bnTradeList: this.bnTradeList });
 
     const actionList = getOrderedActionList(trade);
 
     if (!actionList) {
       if (trade.updateList.length > 0) {
-        this.logger.warn(`actionList 不应该为空，跳过`, { trade: trade });
+        this.logger.warn(`${pair} actionList 不应该为空，跳过`, { trade: trade });
       }
       return;
     }
 
     if (isTradeOpen(trade)) {
-      this.logger.info('开始分析开仓操作', { pair: pair });
+      this.logger.info(`${pair} 开始分析开仓操作`, { pair: pair });
 
       const action = _.head(actionList);
 
@@ -146,15 +146,13 @@ export class GMXService {
 
       if (bnTrade) {
         this.logger.warn(`特殊情况，想要开仓但 binance 已包含已包含 ${pair} 仓位. 跳过`, { pair: pair, bnTrade: bnTrade });
-        this.logger.info('结束分析开仓操作', { pair: pair });
+        this.logger.info(`${pair} 结束分析开仓操作`, { pair: pair });
         return;
       }
 
       if (!action) {
-        this.logger.warn(`${pair}异常情况， 没有 action。 跳过`, { trade: trade, pair: pair });
-        this.bnTradeListOpen(symbol, trade, actionList, pair);
-        this.logger.debug(`已更新 bnTradeList`, { pair: pair, bnTradeList: this.bnTradeList });
-        this.logger.info('结束分析开仓操作', { pair: pair });
+        this.logger.warn(`${pair} 异常情况， 没有 action。 跳过`, { trade: trade, pair: pair });
+        this.logger.info(`${pair} 结束分析开仓操作`, { pair: pair });
         return;
       }
 
@@ -167,7 +165,7 @@ export class GMXService {
       };
 
       this.bnTradeListOpen(symbol, trade, actionList, pair);
-      this.logger.debug(`已更新 bnTradeList`, { pair: pair, bnTradeList: this.bnTradeList });
+      this.logger.debug(`${pair} 已更新 bnTradeList`, { pair: pair, bnTradeList: this.bnTradeList });
 
       const actionTime = dayjs.unix(action.timestamp);
       const diffInSeconds = dayjs().diff(actionTime, 'second');
@@ -179,20 +177,20 @@ export class GMXService {
           actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
         });
 
-        this.logger.info('结束分析开仓操作', { pair: pair });
+        this.logger.info(`${pair} 结束分析开仓操作`, { pair: pair });
         return;
       }
 
-      this.logger.info('结束分析开仓操作', { pair: pair });
+      this.logger.info(`${pair} 结束分析开仓操作`, { pair: pair });
 
-      this.logger.info(`发出 ${pair} POSITION_OPEN 事件`, { pair: pair });
+      this.logger.info(`${pair} 发出 POSITION_OPEN 事件`, { pair: pair });
       this.eventEmitter.emit(POSITION_OPEN, event);
     } else if (isTradeClosed(trade)) {
-      this.logger.info('开始分析平仓操作', { pair: pair });
+      this.logger.info(`${pair} 开始分析平仓操作`, { pair: pair });
 
       if (!trade.closedPosition) {
         this.logger.warn(`${pair}异常情况，没有 closedPosition.跳过`, { pair: pair, trade: trade });
-        this.logger.info('结束分析平仓操作', { pair: pair });
+        this.logger.info(`${pair} 结束分析平仓操作`, { pair: pair });
         return;
       }
 
@@ -200,32 +198,32 @@ export class GMXService {
       const diffInSeconds = dayjs().diff(actionTime, 'second');
 
       if (Math.abs(diffInSeconds) > this.bnTradeTimeout) {
-        this.logger.warn(`Trader 平仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟， 跳过`, {
+        this.logger.warn(`${pair} Trader 平仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟， 跳过`, {
           pair: pair,
           diffInSeconds: diffInSeconds,
           actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
           trade: trade,
         });
 
-        this.logger.info('结束分析平仓操作'), { pair: pair };
+        this.logger.info(`${pair} 结束分析平仓操作`), { pair: pair };
         return;
       }
 
-      this.logger.info('结束分析平仓操作', { pair: pair });
+      this.logger.info(`${pair} 结束分析平仓操作`, { pair: pair });
 
       this.notifyClosePosition(trade, symbol, pair);
     } else {
-      this.logger.info('开始分析加减仓', { pair: pair });
+      this.logger.info(`${pair} 开始分析加减仓`, { pair: pair });
 
       if (!bnTrade) {
-        this.logger.warn(`想要更新 ${pair} 仓位，但监控到 trader 仓位存在， 但服务器没有记录，请手动酌情开启自己的仓位。`, {
+        this.logger.warn(`${pair} 想要更新仓位，但监控到 trader 仓位存在， 但服务器没有记录，请手动酌情开启自己的仓位。`, {
           bnTradeList: this.bnTradeList,
           pair: pair,
         });
 
         this.bnTradeListOpen(symbol, trade, actionList, pair);
-        this.logger.debug(`跳过，已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
-        this.logger.info('结束分析加减仓', { pair: pair });
+        this.logger.warn(`${pair} 已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
+        this.logger.info(`${pair} 结束分析加减仓`, { pair: pair });
 
         return;
       }
@@ -236,34 +234,27 @@ export class GMXService {
       const action = _.head(changes.added);
 
       if (!action) {
-        this.logger.warn(`${pair} 监控到被观察 trader 仓位存在， 想要处理 changes， 但 action 为空`, {
+        this.logger.warn(`${pair} Trader 仓位存在，但没有新的变化`, {
           lastActionList: lastActionList,
           actionList: actionList,
           changes: changes,
           pair: pair,
         });
 
-        this.logger.info('结束分析加减仓', { pair: pair });
+        this.logger.info(`${pair} 结束分析加减仓`, { pair: pair });
 
         return;
       }
 
       this.logger.debug(`${pair} 当前 action`, { action: action, pair: pair });
 
-      this.bnTradeListUpdate(bnTrade, actionList);
-      this.logger.debug(`已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
-
-      const event: TradeEvent = {
-        trade: bnTrade,
-        updateAction: action,
-        raw: trade,
-      };
+      // 过期的 action
 
       const actionTime = dayjs.unix(action.timestamp);
       const diffInSeconds = dayjs().diff(actionTime, 'second');
 
       if (Math.abs(diffInSeconds) > this.bnTradeTimeout) {
-        this.logger.warn(`Trader 调仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟， 跳过`, {
+        this.logger.warn(`${pair} Trader 调仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟， 跳过`, {
           diffInSeconds: diffInSeconds,
           actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
           pair: pair,
@@ -271,15 +262,26 @@ export class GMXService {
 
         this.bnTradeListUpdate(bnTrade, actionList);
 
-        this.logger.debug(`已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
-        this.logger.info('结束分析加减仓', { pair: pair });
+        this.logger.warn(`${pair} 已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
+        this.logger.info(`${pair} 结束分析加减仓`, { pair: pair });
 
         return;
       }
 
-      this.logger.info('结束分析加减仓', { pair: pair });
+      // 正常流程
 
-      this.logger.info(`发出 ${pair} POSITION_UPDATED 事件`, { pair: pair });
+      this.bnTradeListUpdate(bnTrade, actionList);
+      this.logger.debug(`${pair} 已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
+
+      const event: TradeEvent = {
+        trade: bnTrade,
+        updateAction: action,
+        raw: trade,
+      };
+
+      this.logger.info(`${pair} 结束分析加减仓`, { pair: pair });
+      this.logger.info(`${pair} 发出 POSITION_UPDATED 事件`, { pair: pair });
+
       this.eventEmitter.emit(POSITION_UPDATED, event);
     }
   }
@@ -318,9 +320,9 @@ export class GMXService {
     };
 
     _.remove(this.bnTradeList, { symbol: symbol });
-    this.logger.debug(`bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
+    this.logger.debug(`${pair} bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
 
-    this.logger.info(`发出 ${pair} POSITION_CLOSED 事件`, { pair: pair });
+    this.logger.info(`${pair} 发出 POSITION_CLOSED 事件`, { pair: pair });
     this.eventEmitter.emit(POSITION_CLOSED, event);
   }
 
