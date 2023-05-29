@@ -1,45 +1,42 @@
 import { Injectable } from '@nestjs/common';
-import { Status, getBuiltGraphSDK } from '../../.graphclient';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as _ from 'lodash';
-import { POSITION_CLOSED, POSITION_CLOSED_ALL, POSITION_OPEN, POSITION_UPDATED, TOKEN_SYMBOL } from 'src/common/constants';
-import { CEXTrade, GMXTrade, IPositionDecrease, IPositionIncrease, ITrade, TradeEvent } from 'src/interfaces/gmx.interface';
-import { getOrderedActionList, isTradeClosed, isTradeOpen } from 'src/middleware/gmx/gmx.middleware';
+import { POSITION_CLOSED, POSITION_INCREASE } from 'src/common/constants';
+import { TradeEvent } from 'src/interfaces/gmx.interface';
 import * as diff from 'fast-array-diff';
-import { dayjs } from 'src/common/day';
 import winston from 'winston';
 import { createWinstonLogger } from 'src/common/winston-config.service';
+import { TradeAction } from './types';
+import { GMXContractService } from './gmx-contract.service';
 
 @Injectable()
 export class GMXService {
   private logger: winston.Logger;
 
-  private bnTradeTimeout = 60;
-  // binance 交易所仓位
-  private bnTradeList: CEXTrade[] = [];
+  private dealTradeList: TradeAction[] = [];
   private _isWatching = false;
 
-  private sdk = getBuiltGraphSDK();
-
-  private _lastQueryTrades: GMXTrade[] | undefined;
+  private _lastQueryTrades: TradeAction[] | undefined;
 
   private startWatch = false;
 
   private _watchingInfo: {
-    account: string | undefined;
-    status: string | undefined;
+    account: string;
   } = {
-    account: undefined,
-    status: undefined,
+    account: '0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66',
   };
 
-  constructor(private eventEmitter: EventEmitter2) {
+  constructor(private eventEmitter: EventEmitter2, private contract: GMXContractService) {
     this.logger = createWinstonLogger({ service: GMXService.name });
   }
 
-  get activeTrades() {
-    return this._lastQueryTrades;
+  async getActivePositions() {
+    if (this.contract.positions === undefined) {
+      return (await this.contract.getAccountPosition('0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66')).positions;
+    }
+
+    return this.contract.positions;
   }
 
   get isWatching() {
@@ -50,286 +47,89 @@ export class GMXService {
     return this._watchingInfo;
   }
 
-  async watchAccountTradeList(account: string, status: Status) {
-    this._watchingInfo = { account: account, status: status };
+  private async monitorTradeList(account: string) {
+    if (!this.startWatch) {
+      return;
+    }
+
+    const trades = await this.contract.getInterestedTradeActions();
+    const changes = diff.diff(this._lastQueryTrades ?? [], trades, (ia, ib) => ia.id === ib.id);
+
+    if (_.isEmpty(changes.added) == false) {
+      const added = changes.added;
+      this.logger.info(`发现新的 ${added.length} 个交易：`, { added: added });
+
+      for (let index = 0; index < added.length; index++) {
+        const trade = added[index];
+
+        if (this.dealTradeList.includes(trade)) {
+          this.logger.warn(`早已成交过此 trade: ${trade} 跳过`);
+          continue;
+        }
+
+        const deal = await this.contract.dealTradeAction(trade);
+
+        if (deal === undefined) {
+          this.logger.warn(`没法处理此 trade: ${trade}`);
+          this.dealTradeList.push(trade);
+          continue;
+        }
+
+        const symbol = deal.symbol;
+        const pair = symbol + 'USDT';
+
+        const event: TradeEvent = {
+          trade: {
+            timestamp: Number(trade.data.timestamp),
+            symbol: symbol,
+            pair: pair,
+          },
+          deal: deal,
+          raw: trade,
+        };
+
+        if (deal.status === 'Increase') {
+          // 买入信号
+
+          this.logger.info(`${pair} 发出 POSITION_INCREASE 事件`);
+          this.eventEmitter.emit(POSITION_INCREASE, event);
+        }
+
+        if (deal.status === 'Decrease') {
+          // 减仓信号
+        }
+
+        if (deal.status === 'Closed' || deal.status === 'Liquidated') {
+          // 平仓/清仓信号
+          this.logger.info(`${pair} 发出 POSITION_CLOSED 事件`);
+          this.eventEmitter.emit(POSITION_CLOSED, event);
+        }
+
+        this.logger.info(`结束处理 ${pair} trade: ${trade}`);
+        this.dealTradeList.push(trade);
+      }
+    }
+
+    this._lastQueryTrades = trades;
+
+    await this.monitorTradeList(account);
+  }
+
+  async startMonitor(account: string) {
+    if (this.isWatching) {
+      return;
+    }
+
     this.startWatch = true;
     this._isWatching = true;
+    this._watchingInfo = { account: account };
 
-    const result = await this.sdk.AccountTradeList({
-      account: account,
-      status: status,
-    });
-
-    for await (const query of result) {
-      if (!this.startWatch) {
-        break;
-      }
-
-      const activeTrades = query.trades;
-      // 1. trader 没有仓位则清空 binance 所有仓位。
-      if (!this._lastQueryTrades && _.isEmpty(activeTrades)) {
-        this.notifyCloseAllTrade();
-      } else {
-        const changes = diff.diff(this._lastQueryTrades ?? [], activeTrades, this.tradesCompare);
-        const noChanges = _.isEmpty(changes.added) && _.isEmpty(changes.removed);
-        const hasChanges = !noChanges;
-        const hasClosePosition = activeTrades.length > 0 && activeTrades.length < (this._lastQueryTrades ?? []).length;
-
-        if (hasClosePosition) {
-          this.logger.info('监控发现 Trader 有新的平仓操作');
-
-          // 某个仓位被关闭了。
-          this.logger.info('开始分析平仓操作');
-          changes.removed.forEach((trade) => {
-            const symbol = TOKEN_SYMBOL.get(trade.indexToken.toLowerCase());
-            if (!symbol) {
-              this.logger.warn(`参数异常， 没有 ${symbol})}`, { indexToken: trade.indexToken });
-              return;
-            }
-
-            this.logger.info('结束分析平仓操作');
-
-            const pair = symbol + 'USDT';
-            this.notifyClosePosition(trade, symbol, pair);
-          });
-        } else if (_.isEmpty(activeTrades) && hasChanges) {
-          this.notifyCloseAllTrade();
-        } else if (hasChanges) {
-          this.logger.info('监控发现 Trader 有新的调仓操作');
-          this.logger.info(`开始分析调仓操作`);
-
-          query.trades.forEach((trade) => {
-            this.diffTrade(trade);
-          });
-        }
-      }
-
-      this._lastQueryTrades = query.trades;
-    }
+    return await this.monitorTradeList(account);
   }
 
-  // 所有仓位平仓
-  notifyCloseAllTrade() {
-    this.eventEmitter.emit(POSITION_CLOSED_ALL);
-    this.bnTradeList = [];
-    this.logger.info('发出 POSITION_CLOSED_ALL 事件');
-  }
-
-  private diffTrade(trade: ITrade) {
-    const symbol = TOKEN_SYMBOL.get(trade.indexToken.toLowerCase());
-    if (!symbol) {
-      this.logger.warn(`参数异常， 没有 symbol，跳过`, { indexToken: trade.indexToken });
-      return;
-    }
-
-    const pair = symbol + 'USDT';
-    const bnTrade = _.find(this.bnTradeList, { symbol: symbol });
-
-    this.logger.info(`${pair} 开始处理 diffTrade`, { pair: pair });
-    this.logger.debug(`当前 bnTradeList`, { bnTradeList: this.bnTradeList });
-
-    const actionList = getOrderedActionList(trade);
-
-    if (!actionList) {
-      if (trade.updateList.length > 0) {
-        this.logger.warn(`${pair} actionList 不应该为空，跳过`, { trade: trade });
-      }
-      return;
-    }
-
-    if (isTradeOpen(trade)) {
-      this.logger.info(`${pair} 开始分析开仓操作`, { pair: pair });
-
-      const action = _.head(actionList);
-
-      this.logger.debug(`${pair} 当前 action`, { action: action, pair: pair });
-
-      if (bnTrade) {
-        this.logger.warn(`特殊情况，想要开仓但 binance 已包含已包含 ${pair} 仓位. 跳过`, { pair: pair, bnTrade: bnTrade });
-        this.logger.info(`${pair} 结束分析开仓操作`, { pair: pair });
-        return;
-      }
-
-      if (!action) {
-        this.logger.warn(`${pair} 异常情况， 没有 action。 跳过`, { trade: trade, pair: pair });
-        this.logger.info(`${pair} 结束分析开仓操作`, { pair: pair });
-        return;
-      }
-
-      const newTrade = { symbol: symbol, openTimestamp: trade.timestamp, actions: actionList, pair: pair };
-
-      const event: TradeEvent = {
-        trade: newTrade,
-        updateAction: action,
-        raw: trade,
-      };
-
-      this.bnTradeListOpen(symbol, trade, actionList, pair);
-      this.logger.debug(`${pair} 已更新 bnTradeList`, { pair: pair, bnTradeList: this.bnTradeList });
-
-      const actionTime = dayjs.unix(action.timestamp);
-      const diffInSeconds = dayjs().diff(actionTime, 'second');
-
-      if (Math.abs(diffInSeconds) > this.bnTradeTimeout) {
-        this.logger.warn(`Trader ${pair} 开仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟, 跳过`, {
-          pair: pair,
-          diffInSeconds: diffInSeconds,
-          actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
-        });
-
-        this.logger.info(`${pair} 结束分析开仓操作`, { pair: pair });
-        return;
-      }
-
-      this.logger.info(`${pair} 结束分析开仓操作`, { pair: pair });
-
-      this.logger.info(`${pair} 发出 POSITION_OPEN 事件`, { pair: pair });
-      this.eventEmitter.emit(POSITION_OPEN, event);
-    } else if (isTradeClosed(trade)) {
-      this.logger.info(`${pair} 开始分析平仓操作`, { pair: pair });
-
-      if (!trade.closedPosition) {
-        this.logger.warn(`${pair}异常情况，没有 closedPosition.跳过`, { pair: pair, trade: trade });
-        this.logger.info(`${pair} 结束分析平仓操作`, { pair: pair });
-        return;
-      }
-
-      const actionTime = dayjs.unix(trade.closedPosition.timestamp);
-      const diffInSeconds = dayjs().diff(actionTime, 'second');
-
-      if (Math.abs(diffInSeconds) > this.bnTradeTimeout) {
-        this.logger.warn(`${pair} Trader 平仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟， 跳过`, {
-          pair: pair,
-          diffInSeconds: diffInSeconds,
-          actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
-          trade: trade,
-        });
-
-        this.logger.info(`${pair} 结束分析平仓操作`), { pair: pair };
-        return;
-      }
-
-      this.logger.info(`${pair} 结束分析平仓操作`, { pair: pair });
-
-      this.notifyClosePosition(trade, symbol, pair);
-    } else {
-      this.logger.info(`${pair} 开始分析加减仓`, { pair: pair });
-
-      if (!bnTrade) {
-        this.logger.warn(`${pair} 想要更新仓位，但监控到 trader 仓位存在， 但服务器没有记录，请手动酌情开启自己的仓位。`, {
-          bnTradeList: this.bnTradeList,
-          pair: pair,
-        });
-
-        this.bnTradeListOpen(symbol, trade, actionList, pair);
-        this.logger.warn(`${pair} 已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
-        this.logger.info(`${pair} 结束分析加减仓`, { pair: pair });
-
-        return;
-      }
-
-      // 调仓
-      const lastActionList = bnTrade?.actions;
-      const changes = diff.diff(lastActionList, actionList, this.actionCompare);
-      const action = _.head(changes.added);
-
-      if (!action) {
-        this.logger.warn(`${pair} Trader 仓位存在，但没有新的变化`, {
-          lastActionList: lastActionList,
-          actionList: actionList,
-          changes: changes,
-          pair: pair,
-        });
-
-        this.logger.info(`${pair} 结束分析加减仓`, { pair: pair });
-
-        return;
-      }
-
-      this.logger.debug(`${pair} 当前 action`, { action: action, pair: pair });
-
-      // 过期的 action
-
-      const actionTime = dayjs.unix(action.timestamp);
-      const diffInSeconds = dayjs().diff(actionTime, 'second');
-
-      if (Math.abs(diffInSeconds) > this.bnTradeTimeout) {
-        this.logger.warn(`${pair} Trader 调仓操作在 ${actionTime.fromNow()}， 超过了 ${this.bnTradeTimeout} 秒钟， 跳过`, {
-          diffInSeconds: diffInSeconds,
-          actionTime: actionTime.format('YYYY-MM-DD HH:mm:ss'),
-          pair: pair,
-        });
-
-        this.bnTradeListUpdate(bnTrade, actionList);
-
-        this.logger.warn(`${pair} 已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
-        this.logger.info(`${pair} 结束分析加减仓`, { pair: pair });
-
-        return;
-      }
-
-      // 正常流程
-
-      this.bnTradeListUpdate(bnTrade, actionList);
-      this.logger.debug(`${pair} 已更新 bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
-
-      const event: TradeEvent = {
-        trade: bnTrade,
-        updateAction: action,
-        raw: trade,
-      };
-
-      this.logger.info(`${pair} 结束分析加减仓`, { pair: pair });
-      this.logger.info(`${pair} 发出 POSITION_UPDATED 事件`, { pair: pair });
-
-      this.eventEmitter.emit(POSITION_UPDATED, event);
-    }
-  }
-
-  private bnTradeListOpen(symbol: string, trade: ITrade, actionList: (IPositionIncrease | IPositionDecrease)[], pair: string) {
-    const newTrade = { symbol: symbol, openTimestamp: trade.timestamp, actions: actionList, pair: pair };
-    const index = _.findIndex(this.bnTradeList, newTrade);
-    if (index === -1) {
-      this.bnTradeList.push(newTrade);
-    }
-  }
-
-  private bnTradeListUpdate(bnTrade: CEXTrade, actionList: (IPositionIncrease | IPositionDecrease)[]) {
-    const index = this.bnTradeList.indexOf(bnTrade);
-    this.bnTradeList[index].actions = actionList;
-  }
-
-  private actionCompare(x: IPositionIncrease | IPositionDecrease, y: IPositionIncrease | IPositionDecrease) {
-    return x.id === y.id;
-  }
-
-  private tradesCompare(x: GMXTrade, y: GMXTrade) {
-    return x.indexToken == y.indexToken && x.account == y.account && x.updateList.length == y.updateList.length;
-  }
-
-  private notifyClosePosition(trade: ITrade, symbol: string, pair: string) {
-    const event: TradeEvent = {
-      trade: {
-        openTimestamp: trade.timestamp,
-        symbol: symbol,
-        pair: pair,
-        actions: [],
-      },
-      closeAction: trade.closedPosition,
-      raw: trade,
-    };
-
-    _.remove(this.bnTradeList, { symbol: symbol });
-    this.logger.debug(`${pair} bnTradeList`, { bnTradeList: this.bnTradeList, pair: pair });
-
-    this.logger.info(`${pair} 发出 POSITION_CLOSED 事件`, { pair: pair });
-    this.eventEmitter.emit(POSITION_CLOSED, event);
-  }
-
-  stopWatch() {
+  stopMonitor() {
     this.startWatch = false;
     this._isWatching = false;
     this._lastQueryTrades = [];
-    this._watchingInfo = { account: undefined, status: undefined };
   }
 }

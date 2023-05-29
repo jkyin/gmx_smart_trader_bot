@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { getBotToken } from 'nestjs-telegraf';
 import { ConfigService } from '@nestjs/config';
 import { createWinstonLogger } from './common/winston-config.service';
+import BigNumber from 'bignumber.js';
 
 async function bootstrap() {
   process.env.TZ = 'Asia/Shanghai';
@@ -21,6 +22,8 @@ async function bootstrap() {
   if (!port) {
     throw new Error('no port env.');
   }
+
+  BigNumber.set({ EXPONENTIAL_AT: 1e9 });
 
   const bot = app.get(getBotToken());
   app.use(bot.webhookCallback(webhookPath));

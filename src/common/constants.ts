@@ -1,7 +1,6 @@
-export const POSITION_OPEN = 'position.open';
 export const POSITION_CLOSED = 'position.closed';
 export const POSITION_CLOSED_ALL = 'position.closed.all';
-export const POSITION_UPDATED = 'position.updated';
+export const POSITION_INCREASE = 'position.increase';
 export const GMX_DECIMALS = 30;
 
 export const TOKEN_SYMBOL: Map<string, string> = new Map([

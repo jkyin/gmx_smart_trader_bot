@@ -10,7 +10,7 @@ __underline__
 [inline URL](http://www.example.com/)
 [inline mention of a user](tg://user?id=123456789)
 
-${escapeTelegramSpecialChars('1. debank(https://debank.com/profile/0x7b7736a2c07c4332ffad45a039d2117ae15e3f66/history?chain=arb)')}
+${escapeTelegramSpecialChars('1. debank(https://debank.com/profile/0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66/history?chain=arb)')}
 2\\. [gmx\\.house](https://www.gmx.house/arbitrum/account/0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66)
 
 这些是 telegram 特殊字符： \`${escapeTelegramSpecialChars('`_*[]()~>#+-=|{}.!')}\`

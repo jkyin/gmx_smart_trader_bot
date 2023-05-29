@@ -16,10 +16,7 @@ export class HealthController {
   @HealthCheck()
   check() {
     try {
-      return this.health.check([
-        () => this.http.pingCheck('gmx-endpoint', 'https://api.thegraph.com/subgraphs/name/nissoh/gmx-arbitrum'),
-        () => this.binance.checkAPIValid(),
-      ]);
+      return this.health.check([() => this.binance.checkAPIValid()]);
     } catch (error) {
       this.logger.error(error);
     }
