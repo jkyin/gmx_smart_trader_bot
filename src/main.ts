@@ -15,6 +15,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const webhookPath = configService.get<string>('WEBHOOK_PATH');
   const port = configService.get<number>('PORT');
+  const localTest = Boolean(configService.get<boolean>('LOCAL_TEST'));
 
   if (!webhookPath) {
     throw new Error('no webhookPath env.');
@@ -26,14 +27,20 @@ async function bootstrap() {
 
   BigNumber.set({ EXPONENTIAL_AT: 1e9 });
   axios.defaults.timeout = 10000;
-  // axios.defaults.proxy = {
-  //   protocol: 'http',
-  //   host: '127.0.0.1',
-  //   port: 9091,
-  // };
+
+  if (localTest) {
+    axios.defaults.proxy = {
+      protocol: 'http',
+      host: '127.0.0.1',
+      port: 9091,
+    };
+  }
 
   const bot = app.get(getBotToken());
-  app.use(bot.webhookCallback(webhookPath));
+
+  if (!localTest) {
+    app.use(bot.webhookCallback(webhookPath));
+  }
 
   await app.listen(port).catch((error) => logger.error(error));
 }

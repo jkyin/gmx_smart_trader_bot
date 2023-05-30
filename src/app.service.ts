@@ -240,6 +240,7 @@ export class AppService implements OnApplicationBootstrap {
       }
     } catch (error) {
       this.logger.error(error);
+      this.replyWithMarkdown(escapeTgSpecialChars((error as Error).message));
     }
   }
 

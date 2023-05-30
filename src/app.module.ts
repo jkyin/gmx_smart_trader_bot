@@ -19,15 +19,21 @@ import { HealthModule } from './health/health.module';
     ScheduleModule.forRoot(),
     TelegrafModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        token: `${configService.get<string>('TELEGRAM_BOT_TOKEN')}`,
-        launchOptions: {
-          webhook: {
-            domain: `${configService.get<string>('WEBHOOK_DOMAIN')}`,
-            hookPath: `${configService.get<string>('WEBHOOK_PATH')}`,
-          },
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const launchOptions = Boolean(configService.get<boolean>('LOCAL_TEST'))
+          ? undefined
+          : {
+              webhook: {
+                domain: `${configService.get<string>('WEBHOOK_DOMAIN')}`,
+                hookPath: `${configService.get<string>('WEBHOOK_PATH')}`,
+              },
+            };
+
+        return {
+          token: `${configService.get<string>('TELEGRAM_BOT_TOKEN')}`,
+          launchOptions: launchOptions,
+        };
+      },
       inject: [ConfigService],
     }),
     GMXModule,
