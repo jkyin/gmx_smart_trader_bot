@@ -97,16 +97,22 @@ export class AppService implements OnApplicationBootstrap {
     this.chatId = ctx.chat?.id;
     const account = '0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66';
 
-    this.gmxService.startMonitor(account).catch(async (error) => {
+    const worker = async () => {
+      await this.gmxService.startMonitor(account);
+    };
+
+    retry(worker, 60, 5000, !this.gmxService.isWatching).catch(async (error) => {
       this.gmxService.stopMonitor();
 
-      const msg = `发生了错误： ${error.message}， 🔴已停止监控。`;
+      const msg = `发生了错误, 🔴已停止监控。 ${(error as Error).message}, stack: ${(error as Error).stack}`;
       this.logger.error(msg, error);
       await ctx.reply(msg);
     });
 
     const msg = '✅启动成功，监控中...';
-    await ctx.reply(msg);
+    await ctx.reply(msg, {
+      disable_web_page_preview: true,
+    });
     this.logger.info(msg);
   }
 
