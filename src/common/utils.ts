@@ -79,3 +79,7 @@ export function formatCurrency(amount: BigNumber): string {
     precision: precision,
   }).format();
 }
+
+export function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

@@ -9,6 +9,7 @@ import winston from 'winston';
 import { createWinstonLogger } from 'src/common/winston-config.service';
 import { TradeAction } from './types';
 import { GMXContractService } from './gmx-contract.service';
+import { delay } from 'src/common/utils';
 
 @Injectable()
 export class GMXService {
@@ -105,21 +106,19 @@ export class GMXService {
           this.eventEmitter.emit(POSITION_CLOSED, event);
         }
 
-        this.logger.info(`结束处理 ${pair} trade: ${trade}`);
+        this.logger.info(`结束处理 ${pair}`, { trade: trade });
         this.dealTradeList.push(trade);
       }
     }
 
     this._lastQueryTrades = trades;
 
+    await delay(1000);
+
     await this.monitorTradeList(account);
   }
 
   async startMonitor(account: string) {
-    if (this.isWatching) {
-      return;
-    }
-
     this.startWatch = true;
     this._isWatching = true;
     this._watchingInfo = { account: account };

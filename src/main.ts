@@ -4,6 +4,7 @@ import { getBotToken } from 'nestjs-telegraf';
 import { ConfigService } from '@nestjs/config';
 import { createWinstonLogger } from './common/winston-config.service';
 import BigNumber from 'bignumber.js';
+import axios from 'axios';
 
 async function bootstrap() {
   process.env.TZ = 'Asia/Shanghai';
@@ -24,6 +25,12 @@ async function bootstrap() {
   }
 
   BigNumber.set({ EXPONENTIAL_AT: 1e9 });
+  axios.defaults.timeout = 10000;
+  // axios.defaults.proxy = {
+  //   protocol: 'http',
+  //   host: '127.0.0.1',
+  //   port: 9091,
+  // };
 
   const bot = app.get(getBotToken());
   app.use(bot.webhookCallback(webhookPath));

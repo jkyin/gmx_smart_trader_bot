@@ -97,13 +97,7 @@ export class AppService implements OnApplicationBootstrap {
     this.chatId = ctx.chat?.id;
     const account = '0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66';
 
-    retry(
-      () => {
-        return this.gmxService.startMonitor(account);
-      },
-      50,
-      3000,
-    ).catch(async (error) => {
+    this.gmxService.startMonitor(account).catch(async (error) => {
       this.gmxService.stopMonitor();
 
       const msg = `发生了错误： ${error.message}， 🔴已停止监控。`;
@@ -144,21 +138,11 @@ export class AppService implements OnApplicationBootstrap {
     `;
 
     const output = formatLeftAlign(reply);
-    // console.log(reply);
 
-    try {
-      if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, output, {
-          parse_mode: 'MarkdownV2',
-          disable_web_page_preview: true,
-        });
-      }
-    } catch (error) {
-      this.logger.error('开仓发生错误', error);
-      if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, (error as Error).message);
-      }
-    }
+    ctx.reply(output, {
+      parse_mode: 'MarkdownV2',
+      disable_web_page_preview: true,
+    });
   }
 
   @OnEvent(POSITION_INCREASE)
@@ -175,10 +159,10 @@ export class AppService implements OnApplicationBootstrap {
     const relationDate = dayjs.unix(timestamp).fromNow();
     const date = dayjs.tz(timestamp * 1000, 'Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
 
-    this.logger.info(`收到 ${symbol} 调仓信号`, { event: event });
+    this.logger.info(`${pair} 收到调仓信号`, { event: event });
 
     if (margin === undefined || isLong === undefined || account === undefined || leverage === undefined) {
-      this.logger.warn(`参数异常， margin:${margin?.toString()}, isLong:${isLong}, account:${account}, leverage:${leverage?.toString()}`, {
+      this.logger.warn(`${pair} 参数异常， margin:${margin?.toString()}, isLong:${isLong}, account:${account}, leverage:${leverage?.toString()}`, {
         event: event,
       });
       return;
@@ -192,8 +176,8 @@ export class AppService implements OnApplicationBootstrap {
     ⏰_${escapeTgSpecialChars(date)}   ${escapeTgSpecialChars(relationDate)}_⏰
 
     🪙*${symbol}:*       ${escapeTgSpecialChars(longOrShortText)}
-    💰入场价:    ${price}
-    🔥杠杆:       \`${leverage.toString()}x\`
+    💰入场价:    ${escapeTgSpecialChars(price)}
+    🔥杠杆:       \`${escapeTgSpecialChars(leverage.toString())}x\`
     💵清算价:      \\-\\-
 
     已加仓/开仓 ${formatCurrency(margin)}
@@ -202,34 +186,34 @@ export class AppService implements OnApplicationBootstrap {
     try {
       const bnActivePosition = await this.bnService.getActiveFuturePositionInfo(pair);
       const bnBalance = await this.bnService.usdtBalance();
-      const bnLeverage = bnActivePosition?.leverage ?? leverage.toString();
+      const bnLeverage = bnActivePosition?.leverage ?? leverage.integerValue().toString();
       const preferLeverage = BigNumber(bnLeverage);
       const preferMargin = this.getPreferMargin(margin);
 
       if (bnBalance?.availableBalance === undefined) {
-        this.logger.warn('想要加仓，但是余额不足', { balance: bnBalance });
+        this.logger.warn(`${pair} 想要加仓，但是余额数据为 undefined`, { balance: bnBalance });
         return;
       }
 
       if (BigNumber(bnBalance.availableBalance).isLessThan(preferMargin)) {
-        this.logger.warn('想要加仓，但是余额不足', { balance: bnBalance });
+        this.logger.warn(`${pair} 想要加仓:${preferMargin}，但是余额不足，当前余额：${bnBalance.availableBalance}`, { balance: bnBalance });
         return;
       }
 
       const quantity = await this.bnService.getQuantity(symbol, preferMargin, preferLeverage, bnMarketPrice);
 
       if (bnActivePosition) {
-        this.logger.info(`已有 ${pair} 仓位，准备加仓`, { bnActivePosition: bnActivePosition });
-        this.logger.info(`准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
+        this.logger.info(`${pair} 已有仓位，准备加仓`, { bnActivePosition: bnActivePosition });
+        this.logger.info(`${pair} 准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.increasePosition(pair, quantity, isLong);
-        this.logger.info(`加仓成功`, { result: result });
+        this.logger.info(`${pair} 加仓成功`, { result: result });
       } else {
-        this.logger.info(`没有 ${pair} 仓位，准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
-        this.logger.info(`准备设置 ${pair} 初始杠杆为:${preferLeverage.toString()}`);
+        this.logger.info(`${pair} 没有仓位，准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
+        this.logger.info(`${pair} 准备设置初始杠杆为:${preferLeverage.toString()}`);
         const result = await this.bnService.setLeverage(pair, preferLeverage.toNumber());
-        this.logger.info('设置初始杠杆成功', { result: result });
+        this.logger.info(`${pair} 设置初始杠杆成功`, { result: result });
         const result2 = await this.bnService.openPosition(pair, quantity, isLong);
-        this.logger.info(`开仓成功`, { result2: result2 });
+        this.logger.info(`${pair} 开仓成功`, { result2: result2 });
       }
 
       // telegram
@@ -252,29 +236,21 @@ export class AppService implements OnApplicationBootstrap {
 
         const output = formatLeftAlign(reply);
 
-        await this.bot.telegram.sendMessage(this.chatId, output, {
-          parse_mode: 'MarkdownV2',
-          disable_web_page_preview: true,
-        });
-
-        this.logger.info(bnActivePosition ? `成功调仓` : `成功开仓`);
+        this.replyWithMarkdown(output);
       }
     } catch (error) {
       this.logger.error(error);
-      if (this.chatId) {
-        await this.bot.telegram.sendMessage(this.chatId, (error as Error).message);
-      }
     }
   }
 
   @OnEvent(POSITION_CLOSED)
   async handlePositionClosedEvent(event: TradeEvent) {
     const pair = event.trade.pair;
-    this.logger.info(`收到 ${pair} 平仓信号`, { event: event });
-    this.logger.info(`开始处理 ${pair} 平仓`);
+    this.logger.info(`${pair} 收到平仓信号`, { event: event });
+    this.logger.info(`${pair} 开始处理平仓`);
 
     const result = await this.bnService.closePosition(pair);
-    this.logger.info(`已平仓`, { result: result });
+    this.logger.info(`${pair} 已平仓`, { result: result });
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
   }
