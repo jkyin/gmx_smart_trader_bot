@@ -6,11 +6,11 @@ const BACKEND_URLS: {
   default: string;
   [index: number]: string;
 } = {
-  default: 'https://gmx-server-mainnet.uw.r.appspot.com',
+  default: 'https://api.gmx.io',
 
-  [MAINNET]: 'https://gambit-server-staging.uc.r.appspot.com',
+  [MAINNET]: 'https://api.gmx.io',
   [ARBITRUM_TESTNET]: 'https://gambit-server-devnet.uc.r.appspot.com',
-  [ARBITRUM]: 'https://gmx-server-mainnet.uw.r.appspot.com',
+  [ARBITRUM]: 'https://api.gmx.io',
   [AVALANCHE]: 'https://gmx-avax-server.uc.r.appspot.com',
 };
 
