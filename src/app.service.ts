@@ -17,6 +17,7 @@ import winston from 'winston';
 @Injectable()
 export class AppService implements OnApplicationBootstrap {
   private logger: winston.Logger;
+  private didStopMonitor = false;
   private chatId: string | number | undefined;
 
   constructor(private readonly gmxService: GMXService, private readonly bnService: BNService, @InjectBot() private readonly bot: Telegraf<Context>) {
@@ -94,6 +95,8 @@ export class AppService implements OnApplicationBootstrap {
       return;
     }
 
+    this.didStopMonitor = false;
+
     this.chatId = ctx.chat?.id;
     const account = '0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66';
 
@@ -101,7 +104,7 @@ export class AppService implements OnApplicationBootstrap {
       await this.gmxService.startMonitor(account);
     };
 
-    retry(worker, 60, 5000, !this.gmxService.isWatching).catch(async (error) => {
+    retry(worker, 60, 5000, () => this.didStopMonitor).catch(async (error) => {
       this.gmxService.stopMonitor();
 
       const msg = `发生了错误, 🔴已停止监控。 ${(error as Error).message}, stack: ${(error as Error).stack}`;
@@ -118,6 +121,7 @@ export class AppService implements OnApplicationBootstrap {
 
   @Command('stop_watch')
   async handleStopWatch(ctx: Context) {
+    this.didStopMonitor = true;
     this.gmxService.stopMonitor();
     const msg = '✅已停止监控';
     await ctx.reply(msg);
@@ -300,13 +304,13 @@ export class AppService implements OnApplicationBootstrap {
     if (collateral.lte(3000)) {
       return collateral.div(10).integerValue(BigNumber.ROUND_CEIL);
     } else if (collateral.lte(10000)) {
-      return BigNumber(400);
+      return BigNumber(300);
     } else {
-      return BigNumber(600);
+      return BigNumber(500);
     }
   }
 
   getPreferLeverage(leverage: BigNumber) {
-    return BigNumber.minimum(20, leverage.plus(1));
+    return BigNumber.minimum(15, leverage.plus(1));
   }
 }
