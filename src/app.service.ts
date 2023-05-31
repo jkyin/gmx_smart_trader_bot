@@ -311,6 +311,6 @@ export class AppService implements OnApplicationBootstrap {
   }
 
   getPreferLeverage(leverage: BigNumber) {
-    return BigNumber.minimum(15, leverage.plus(1));
+    return BigNumber.minimum(20, leverage.plus(1));
   }
 }
