@@ -277,7 +277,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.info(`提交平仓新订单`, { params: params });
+    this.logger.info(`提交 ${pair} 平仓新订单`, { params: params });
 
     return await this.client.submitNewOrder(params);
   }

@@ -88,6 +88,11 @@ export class AppService implements OnApplicationBootstrap {
 
   @Command('start_watch')
   async handleStartWatch(ctx: Context) {
+    if (ctx.from?.username !== 'yinxiaoyu') {
+      await ctx.reply(`没有权限开启任务`);
+      return;
+    }
+
     if (this.gmxService.isWatching) {
       const msg = '🟢正在监控中，无需重复开启，跳过。';
       this.logger.info(msg);
@@ -104,12 +109,24 @@ export class AppService implements OnApplicationBootstrap {
       await this.gmxService.startMonitor(account);
     };
 
-    retry(worker, 60, 5000, () => this.didStopMonitor).catch(async (error) => {
+    retry(
+      worker,
+      -1,
+      5000,
+      () => this.didStopMonitor,
+      async (error) => {
+        await ctx.reply(error, {
+          disable_web_page_preview: true,
+        });
+      },
+    ).catch(async (error) => {
       this.gmxService.stopMonitor();
 
       const msg = `发生了错误, 🔴已停止监控。 ${(error as Error).message}, stack: ${(error as Error).stack}`;
       this.logger.error(msg, error);
-      await ctx.reply(msg);
+      await ctx.reply(msg, {
+        disable_web_page_preview: true,
+      });
     });
 
     const msg = '✅启动成功，监控中...';
@@ -121,6 +138,11 @@ export class AppService implements OnApplicationBootstrap {
 
   @Command('stop_watch')
   async handleStopWatch(ctx: Context) {
+    if (ctx.from?.username !== 'yinxiaoyu') {
+      await ctx.reply(`没有权限开启任务`);
+      return;
+    }
+
     this.didStopMonitor = true;
     this.gmxService.stopMonitor();
     const msg = '✅已停止监控';
@@ -217,6 +239,7 @@ export class AppService implements OnApplicationBootstrap {
         this.logger.info(`${pair} 准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         const result = await this.bnService.increasePosition(pair, quantity, isLong);
         this.logger.info(`${pair} 加仓成功`, { result: result });
+        this.logger.info(`========= 结束交易 =========`, { result: result });
       } else {
         this.logger.info(`${pair} 没有仓位，准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
         this.logger.info(`${pair} 准备设置初始杠杆为:${preferLeverage.toString()}`);
@@ -224,6 +247,7 @@ export class AppService implements OnApplicationBootstrap {
         this.logger.info(`${pair} 设置初始杠杆成功`, { result: result });
         const result2 = await this.bnService.openPosition(pair, quantity, isLong);
         this.logger.info(`${pair} 开仓成功`, { result2: result2 });
+        this.logger.info(`========= 结束交易 =========`, { result: result });
       }
 
       // telegram
@@ -262,6 +286,7 @@ export class AppService implements OnApplicationBootstrap {
 
     const result = await this.bnService.closePosition(pair);
     this.logger.info(`${pair} 已平仓`, { result: result });
+    this.logger.info(`========= 结束交易 =========`, { result: result });
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
   }
@@ -277,6 +302,7 @@ export class AppService implements OnApplicationBootstrap {
       this.logger.info('不需要全部平仓，跳过', { result: result });
     } else {
       this.logger.info(`已全部平仓`, { result: result });
+      this.logger.info(`========= 结束交易 =========`, { result: result });
 
       await this.replyWithMarkdown('🏦已全部平仓🏦');
     }
@@ -301,10 +327,10 @@ export class AppService implements OnApplicationBootstrap {
 
   // 每次加仓数量。
   getPreferMargin(collateral: BigNumber) {
-    if (collateral.lte(3000)) {
+    if (collateral.lte(4000)) {
       return collateral.div(10).integerValue(BigNumber.ROUND_CEIL);
     } else if (collateral.lte(10000)) {
-      return BigNumber(300);
+      return BigNumber(400);
     } else {
       return BigNumber(500);
     }

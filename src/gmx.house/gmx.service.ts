@@ -58,7 +58,7 @@ export class GMXService {
 
     if (_.isEmpty(changes.added) == false) {
       const added = changes.added;
-      this.logger.info(`发现新的 ${added.length} 个交易：`, { added: added });
+      this.logger.info(`========= 发现 ${added.length} 个新交易 =========`, { added: added });
 
       for (let index = 0; index < added.length; index++) {
         const trade = added[index];

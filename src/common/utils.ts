@@ -57,21 +57,38 @@ export function formatLeftAlign(str: string): string {
   return str.replace(/ *\n */g, '\n');
 }
 
-export async function retry<T>(fn: () => Promise<T>, retryCount: number, delay: number, stopCondition: () => boolean): Promise<T> {
+export async function retry<T>(
+  fn: () => Promise<T>,
+  retryCount: number,
+  delay: number,
+  stopCondition: () => boolean,
+  msgCallback: (msg: string) => void,
+): Promise<T> {
   try {
     const result = await fn();
     return result;
   } catch (error) {
     const stop = stopCondition();
 
-    if (retryCount <= 0 || stop) {
+    if (retryCount == 0 || stop) {
       throw new Error(`All retries failed: ${(error as Error).message}, error: ${(error as Error).stack}`);
     }
 
-    console.warn(`Retry in ${delay}ms, ${retryCount} attempts left`);
+    if (retryCount == -1) {
+      const msg = `Retry failed: ${(error as Error).message}, error: ${(error as Error).stack}, continue retry`;
+      console.warn(msg);
+      msgCallback(msg);
 
-    await new Promise((resolve) => setTimeout(resolve, delay));
-    return retry(fn, retryCount - 1, delay, stopCondition);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return retry(fn, retryCount, delay, stopCondition, msgCallback);
+    } else {
+      const msg = `Retry in ${delay / 1000}s, ${retryCount} attempts left, continue retry.`;
+      console.warn(msg);
+      msgCallback(msg);
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return retry(fn, retryCount - 1, delay, stopCondition, msgCallback);
+    }
   }
 }
 

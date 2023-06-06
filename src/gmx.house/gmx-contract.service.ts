@@ -98,7 +98,8 @@ export class GMXContractService {
       const timestampText = dayjs.tz(Number(trade.data.timestamp) * 1000, 'Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
 
       this.logger.info(
-        `${symbol} 开仓/加仓， 保证金: ${margin}, 杠杆: ${leverage}, 方向： ${longOrShortText}， 当前价格： ${price} USD, 交易时间： ${timestampText} (${relativeTimeText})`,
+        // eslint-disable-next-line max-len
+        `${symbol} 开仓/加仓， 保证金: ${margin}, 杠杆: ${leverage}, 方向： ${longOrShortText}， GMX 当前价格： ${price} USD, 交易时间： ${timestampText} (${relativeTimeText})`,
       );
 
       return {
@@ -120,7 +121,7 @@ export class GMXContractService {
       }
 
       if (bigNumberify(params.collateralDelta).eq(0)) {
-        const msg = `${symbol}: ${longOrShortText} 仓位已关闭, 当前价格： ${formatAmount(params.price, USD_DECIMALS, 2, true)} USD`;
+        const msg = `${symbol}: ${longOrShortText} 仓位已关闭, GMX 当前价格： ${formatAmount(params.price, USD_DECIMALS, 2, true)} USD`;
         this.logger.info(msg);
 
         return {
@@ -182,7 +183,7 @@ export class GMXContractService {
 
       this.positions = positions;
 
-      this.logger.info(`仓位数量: ${positions.length}`, positions);
+      this.logger.info(`Trader GMX 仓位数量: ${positions.length}`, positions);
       return { positions: positions, infoTokens: infoTokens };
       // 在这里处理返回的开仓信息
     } catch (error) {
