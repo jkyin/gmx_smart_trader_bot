@@ -119,6 +119,7 @@ export class GMXService {
   }
 
   async startMonitor(account: string) {
+    this.logger.info(`开始监听 ${account}`);
     this.startWatch = true;
     this._isWatching = true;
     this._watchingInfo = { account: account };
@@ -127,6 +128,7 @@ export class GMXService {
   }
 
   stopMonitor() {
+    this.logger.info(`结束监听 ${this._watchingInfo.account}`);
     this.startWatch = false;
     this._isWatching = false;
     this._lastQueryTrades = [];
