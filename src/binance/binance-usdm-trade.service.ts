@@ -26,8 +26,6 @@ export class BNService {
   private _pairMarketPriceStore: { [key: string]: BigNumber } = {};
   private _pairExchangeInfoStore: FuturesSymbolExchangeInfo[] = [];
 
-  private _allActivePositions: FuturesPosition[] = [];
-
   private client: USDMClient;
 
   constructor(private configService: ConfigService) {
@@ -57,6 +55,8 @@ export class BNService {
       {},
       useTestnet,
     );
+
+    this.getFuturesPositions(true);
   }
 
   async usdtBalance() {
@@ -84,16 +84,6 @@ export class BNService {
     } catch (error) {
       this.logger.error(error);
     }
-  }
-
-  async allActivePositions() {
-    if (this._allActivePositions.length === 0) {
-      await this.getFuturesPositions(true);
-    } else {
-      this.getFuturesPositions(true);
-    }
-
-    return this._allActivePositions;
   }
 
   async getMultiAssetsMode() {
@@ -202,16 +192,15 @@ export class BNService {
 
   async getFuturesPositions(isActive: boolean) {
     const list = await this.client.getPositions();
-    const activeResult = list.filter((p) => {
-      return PAIR_OF_INTEREST.includes(p.symbol) && p.positionAmt != 0;
+    const result = list.filter((p) => {
+      if (isActive) {
+        return PAIR_OF_INTEREST.includes(p.symbol) && p.positionAmt != 0;
+      } else {
+        return PAIR_OF_INTEREST.includes(p.symbol);
+      }
     });
 
-    const normalResult = list.filter((p) => {
-      return PAIR_OF_INTEREST.includes(p.symbol);
-    });
-
-    this._allActivePositions = activeResult;
-    return isActive ? activeResult : normalResult;
+    return result;
   }
 
   async setLeverage(pair: string, leverage: number) {
