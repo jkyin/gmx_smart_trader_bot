@@ -7,6 +7,8 @@ import {
   SymbolPrice,
   FuturesSymbolExchangeInfo,
   FuturesAccountBalance,
+  SetMarginTypeParams,
+  MarginType,
 } from 'binance';
 import { PAIR_OF_INTEREST } from './binance.constants';
 import BigNumber from 'bignumber.js';
@@ -24,7 +26,7 @@ export class BNService {
   private _pairMarketPriceStore: { [key: string]: BigNumber } = {};
   private _pairExchangeInfoStore: FuturesSymbolExchangeInfo[] = [];
 
-  private _allPositions: FuturesPosition[] = [];
+  private _allActivePositions: FuturesPosition[] = [];
 
   private client: USDMClient;
 
@@ -84,12 +86,12 @@ export class BNService {
     }
   }
 
-  async allPositions() {
-    if (this._allPositions.length === 0) {
-      await this.getActiveFuturesPositions();
+  async allActivePositions() {
+    if (this._allActivePositions.length === 0) {
+      await this.getFuturesPositions(true);
     }
 
-    return this._allPositions;
+    return this._allActivePositions;
   }
 
   async getMultiAssetsMode() {
@@ -190,16 +192,23 @@ export class BNService {
   //   _.max(0， _min(isolatedWalletBalance, isolatedWalletBalance + size * (Mark Price - Entry Price) - Mark Price * abs(size) * IMR ))
   // }
 
-  async getActiveFuturePositionInfo(pair: string) {
-    const positions = await this.getActiveFuturesPositions();
+  async getFuturePositionInfo(pair: string, isActive: boolean) {
+    const positions = await this.getFuturesPositions(isActive);
     const result = _.head(positions.filter((p) => p.symbol === pair));
     return result;
   }
 
-  async getActiveFuturesPositions() {
+  async getFuturesPositions(isActive: boolean) {
     const list = await this.client.getPositions();
-    const result = list.filter((p) => PAIR_OF_INTEREST.includes(p.symbol) && p.positionAmt != 0);
-    this._allPositions = result;
+    const result = list.filter((p) => {
+      if (isActive) {
+        return PAIR_OF_INTEREST.includes(p.symbol) && p.positionAmt != 0;
+      } else {
+        return PAIR_OF_INTEREST.includes(p.symbol);
+      }
+    });
+
+    this._allActivePositions = result;
     return result;
   }
 
@@ -209,6 +218,14 @@ export class BNService {
       leverage: leverage,
     };
     return await this.client.setLeverage(params);
+  }
+
+  async setMarginType(pair: string, marginType: MarginType) {
+    const params: SetMarginTypeParams = {
+      symbol: pair,
+      marginType: marginType,
+    };
+    return await this.client.setMarginType(params);
   }
 
   async openPosition(pair: string, quantity: BigNumber, isLong: boolean) {
@@ -227,7 +244,7 @@ export class BNService {
       type: 'MARKET',
     };
 
-    this.logger.info(`提交加仓/开仓新订单`, { params: params });
+    this.logger.info(`提交 ${pair} ${params.side} 订单`, { params: params });
 
     const result = await this.client.submitNewOrder(params);
     return result;
@@ -238,7 +255,7 @@ export class BNService {
       throw new Error(`参数错误： 没有 pair ${pair}`);
     }
 
-    const position = await this.getActiveFuturePositionInfo(pair);
+    const position = await this.getFuturePositionInfo(pair, true);
 
     if (!position) {
       this.logger.info(`想要减仓 ${pair} ，但没有建仓，跳过。`, { pair: pair });
@@ -263,7 +280,7 @@ export class BNService {
       throw new Error(`参数错误： 没有 pair ${pair}`);
     }
 
-    const position = await this.getActiveFuturePositionInfo(pair);
+    const position = await this.getFuturePositionInfo(pair, true);
 
     if (!position) {
       this.logger.info(`${pair} 仓位已平仓，跳过。`, { pair: pair });
@@ -283,7 +300,7 @@ export class BNService {
   }
 
   async closeAllPosition() {
-    const positions = await this.getActiveFuturesPositions();
+    const positions = await this.getFuturesPositions(true);
 
     if (positions.length == 0) {
       this.logger.info(`想要批量平仓，但没有所需仓位，跳过。`);

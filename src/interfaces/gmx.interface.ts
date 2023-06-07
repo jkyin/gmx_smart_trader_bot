@@ -1,6 +1,6 @@
 import { TradeAction, TradeActionDeal } from 'src/gmx.house/types';
 
-export interface TradeEvent {
+export interface TradingOrder {
   trade: {
     timestamp: number;
     // BTC

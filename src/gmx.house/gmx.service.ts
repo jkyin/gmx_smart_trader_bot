@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as _ from 'lodash';
-import { POSITION_CLOSED, POSITION_INCREASE } from 'src/common/constants';
-import { TradeEvent } from 'src/interfaces/gmx.interface';
+import { POSITION_CLOSED, POSITION_INCREASE, POSITION_LIQUIDATED } from 'src/common/constants';
+import { TradingOrder } from 'src/interfaces/gmx.interface';
 import * as diff from 'fast-array-diff';
 import winston from 'winston';
 import { createWinstonLogger } from 'src/common/winston-config.service';
@@ -79,7 +79,7 @@ export class GMXService {
         const symbol = deal.symbol;
         const pair = symbol + 'USDT';
 
-        const event: TradeEvent = {
+        const event: TradingOrder = {
           trade: {
             timestamp: Number(trade.data.timestamp),
             symbol: symbol,
@@ -90,23 +90,28 @@ export class GMXService {
         };
 
         if (deal.status === 'Increase') {
-          // 买入信号
+          // 买入指令
 
-          this.logger.info(`${pair} 发出 POSITION_INCREASE 事件`);
+          this.logger.info(`${pair} 发出 POSITION_INCREASE 指令`);
           this.eventEmitter.emit(POSITION_INCREASE, event);
         }
 
         if (deal.status === 'Decrease') {
-          // 减仓信号
+          // 减仓指令
         }
 
-        if (deal.status === 'Closed' || deal.status === 'Liquidated') {
-          // 平仓/清仓信号
-          this.logger.info(`${pair} 发出 POSITION_CLOSED 事件`);
+        if (deal.status === 'Closed') {
+          // 清仓指令
+          this.logger.info(`${pair} 发出 POSITION_CLOSED 指令`);
           this.eventEmitter.emit(POSITION_CLOSED, event);
         }
 
-        this.logger.info(`结束处理 ${pair}`, { trade: trade });
+        if (deal.status === 'Liquidated') {
+          // 清仓指令
+          this.logger.info(`${pair} 发出 POSITION_LIQUIDATED 指令`);
+          this.eventEmitter.emit(POSITION_LIQUIDATED, event);
+        }
+
         this.dealTradeList.push(trade);
       }
     }

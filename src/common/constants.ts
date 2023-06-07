@@ -1,4 +1,6 @@
 export const POSITION_CLOSED = 'position.closed';
+export const POSITION_LIQUIDATED = 'position.liquidated';
+
 export const POSITION_CLOSED_ALL = 'position.closed.all';
 export const POSITION_INCREASE = 'position.increase';
 export const GMX_DECIMALS = 30;

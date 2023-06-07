@@ -5,8 +5,8 @@ import { GMXService } from './gmx.house/gmx.service';
 import { formatCurrency, escapeTelegramSpecialChars as escapeTgSpecialChars, formatLeftAlign, markdownV2Example, retry } from './common/utils';
 import * as _ from 'lodash';
 import { OnEvent } from '@nestjs/event-emitter';
-import { POSITION_CLOSED, POSITION_CLOSED_ALL, POSITION_INCREASE } from './common/constants';
-import { TradeEvent } from './interfaces/gmx.interface';
+import { POSITION_CLOSED, POSITION_CLOSED_ALL, POSITION_INCREASE, POSITION_LIQUIDATED } from './common/constants';
+import { TradingOrder } from './interfaces/gmx.interface';
 import BigNumber from 'bignumber.js';
 import { BNService } from './binance/binance-usdm-trade.service';
 import { dayjs } from './common/day';
@@ -178,48 +178,35 @@ export class AppService implements OnApplicationBootstrap {
   }
 
   @OnEvent(POSITION_INCREASE)
-  async handlePositionUpdatedEvent(event: TradeEvent) {
-    const account = event.raw.data.account;
-    const symbol = event.trade.symbol;
-    const pair = event.trade.pair;
-    const isLong = event.deal.isLong;
-    const margin = event.deal.margin;
-    const timestamp = event.trade.timestamp;
-    const longOrShortText = event.deal.isLong ? `Long` : `Short`;
-    const price = event.deal.price;
-    const leverage = event.deal.leverage;
+  async handlePositionIncreasedOrder(order: TradingOrder) {
+    const account = order.raw.data.account;
+    const symbol = order.trade.symbol;
+    const pair = order.trade.pair;
+    const isLong = order.deal.isLong;
+    const margin = order.deal.margin;
+    const timestamp = order.trade.timestamp;
+    const longOrShortText = order.deal.isLong ? `Long` : `Short`;
+    const price = order.deal.price;
+    const leverage = order.deal.leverage;
     const relationDate = dayjs.unix(timestamp).fromNow();
     const date = dayjs.tz(timestamp * 1000, 'Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss');
 
-    this.logger.info(`${pair} 收到调仓信号`, { event: event });
+    this.logger.info(`${pair} 收到调仓指令`, { event: order });
 
     if (margin === undefined || isLong === undefined || account === undefined || leverage === undefined) {
       this.logger.warn(`${pair} 参数异常， margin:${margin?.toString()}, isLong:${isLong}, account:${account}, leverage:${leverage?.toString()}`, {
-        event: event,
+        event: order,
       });
       return;
     }
 
     const bnMarketPrice = (await this.bnService.pairMarketPrice())[pair];
 
-    const positionInfoFormatted = `
-    🏦*当前 ${symbol} 仓位* 🏦
-
-    ⏰_${escapeTgSpecialChars(date)}   ${escapeTgSpecialChars(relationDate)}_⏰
-
-    🪙*${symbol}:*       ${escapeTgSpecialChars(longOrShortText)}
-    💰入场价:    ${escapeTgSpecialChars(price)}
-    🔥杠杆:       \`${escapeTgSpecialChars(leverage.toString())}x\`
-    💵清算价:      \\-\\-
-
-    已加仓/开仓 ${formatCurrency(margin)}
-    `;
-
     try {
-      const bnActivePosition = await this.bnService.getActiveFuturePositionInfo(pair);
+      const bnActivePosition = await this.bnService.getFuturePositionInfo(pair, true);
+      const bnPositionInfo = await this.bnService.getFuturePositionInfo(pair, false);
       const bnBalance = await this.bnService.usdtBalance();
-      const bnLeverage = bnActivePosition?.leverage ?? leverage.integerValue().toString();
-      const preferLeverage = BigNumber(bnLeverage);
+      const preferLeverage = BigNumber.max(leverage.integerValue(), 1);
       const preferMargin = this.getPreferMargin(margin);
 
       if (bnBalance?.availableBalance === undefined) {
@@ -233,18 +220,35 @@ export class AppService implements OnApplicationBootstrap {
       }
 
       const quantity = await this.bnService.getQuantity(symbol, preferMargin, preferLeverage, bnMarketPrice);
+      let tradingOrderText = '';
 
       if (bnActivePosition) {
+        tradingOrderText = '加仓';
         this.logger.info(`${pair} 已有仓位，准备加仓`, { bnActivePosition: bnActivePosition });
+
+        this.logger.info(`${pair} 准备调整杠杆为:${preferLeverage.toString()}`);
+        const result = await this.bnService.setLeverage(pair, preferLeverage.toNumber());
+        this.logger.info(`${pair} 调整杠杆成功`, { result: result });
+
         this.logger.info(`${pair} 准备加仓， 增加保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
-        const result = await this.bnService.increasePosition(pair, quantity, isLong);
-        this.logger.info(`${pair} 加仓成功`, { result: result });
+
+        const result2 = await this.bnService.increasePosition(pair, quantity, isLong);
+        this.logger.info(`${pair} 加仓成功`, { result: result2 });
         this.logger.info(`========= 结束交易 =========`, { result: result });
       } else {
+        tradingOrderText = '开仓';
         this.logger.info(`${pair} 没有仓位，准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
+
+        this.logger.info(`${pair} 准备设置保证金模式为： 全仓模式`);
+        if (bnPositionInfo?.marginType !== 'crossed') {
+          const result = await this.bnService.setMarginType(pair, 'CROSSED');
+          this.logger.info(`${pair} 设置保证金全仓模式成功`, { result: result });
+        }
+
         this.logger.info(`${pair} 准备设置初始杠杆为:${preferLeverage.toString()}`);
         const result = await this.bnService.setLeverage(pair, preferLeverage.toNumber());
         this.logger.info(`${pair} 设置初始杠杆成功`, { result: result });
+
         const result2 = await this.bnService.openPosition(pair, quantity, isLong);
         this.logger.info(`${pair} 开仓成功`, { result2: result2 });
         this.logger.info(`========= 结束交易 =========`, { result: result });
@@ -252,6 +256,19 @@ export class AppService implements OnApplicationBootstrap {
 
       // telegram
       if (this.chatId) {
+        const positionInfoFormatted = `
+    🏦*当前 ${symbol} 仓位* 🏦
+
+    ⏰_${escapeTgSpecialChars(date)}   ${escapeTgSpecialChars(relationDate)}_⏰
+
+    🪙方向：        ${escapeTgSpecialChars(longOrShortText)}
+    💰入场价:    ${escapeTgSpecialChars(price)}
+    🔥杠杆:       \`${escapeTgSpecialChars(leverage.toString())}x\`
+    💵清算价:      \\-\\-
+
+    已${tradingOrderText} ${formatCurrency(margin)}
+    `;
+
         const reply = `
         *账号信息*
   
@@ -279,9 +296,22 @@ export class AppService implements OnApplicationBootstrap {
   }
 
   @OnEvent(POSITION_CLOSED)
-  async handlePositionClosedEvent(event: TradeEvent) {
-    const pair = event.trade.pair;
-    this.logger.info(`${pair} 收到平仓信号`, { event: event });
+  async handlePositionClosedOrder(order: TradingOrder) {
+    const pair = order.trade.pair;
+    this.logger.info(`${pair} 收到平仓指令`, { event: order });
+    this.logger.info(`${pair} 开始处理平仓`);
+
+    const result = await this.bnService.closePosition(pair);
+    this.logger.info(`${pair} 已平仓`, { result: result });
+    this.logger.info(`========= 结束交易 =========`, { result: result });
+
+    await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
+  }
+
+  @OnEvent(POSITION_LIQUIDATED)
+  async handlePositionLiquidatedOrder(order: TradingOrder) {
+    const pair = order.trade.pair;
+    this.logger.info(`${pair} 收到清仓指令`, { event: order });
     this.logger.info(`${pair} 开始处理平仓`);
 
     const result = await this.bnService.closePosition(pair);
@@ -292,8 +322,8 @@ export class AppService implements OnApplicationBootstrap {
   }
 
   @OnEvent(POSITION_CLOSED_ALL)
-  async handlePositionClosedAllEvent(event: TradeEvent) {
-    this.logger.info('收到全部平仓信号', { event: event });
+  async handlePositionClosedAllOrder(order: TradingOrder) {
+    this.logger.info('收到全部平仓信号', { event: order });
     this.logger.info('开始处理全部平仓');
 
     const result = await this.bnService.closeAllPosition();
@@ -327,7 +357,9 @@ export class AppService implements OnApplicationBootstrap {
 
   // 每次加仓数量。
   getPreferMargin(collateral: BigNumber) {
-    if (collateral.lte(4000)) {
+    if (collateral.lte(100)) {
+      return collateral;
+    } else if (collateral.lte(4000)) {
       return collateral.div(10).integerValue(BigNumber.ROUND_CEIL);
     } else if (collateral.lte(10000)) {
       return BigNumber(400);
