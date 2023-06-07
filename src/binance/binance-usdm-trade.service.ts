@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
   USDMClient,
-  FuturesPosition,
   NewFuturesOrderParams,
   SetLeverageParams,
   SymbolPrice,
