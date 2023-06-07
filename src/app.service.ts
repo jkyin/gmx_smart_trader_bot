@@ -239,8 +239,8 @@ export class AppService implements OnApplicationBootstrap {
         tradingOrderText = '开仓';
         this.logger.info(`${pair} 没有仓位，准备开仓， 保证金：${preferMargin}， 当前杠杆：${preferLeverage.toString()}`);
 
-        this.logger.info(`${pair} 准备设置保证金模式为： 全仓模式`);
         if (bnPositionInfo?.marginType !== 'crossed') {
+          this.logger.info(`${pair} 准备设置保证金模式为： 全仓模式`);
           const result = await this.bnService.setMarginType(pair, 'CROSSED');
           this.logger.info(`${pair} 设置保证金全仓模式成功`, { result: result });
         }
