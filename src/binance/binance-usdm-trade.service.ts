@@ -89,6 +89,8 @@ export class BNService {
   async allActivePositions() {
     if (this._allActivePositions.length === 0) {
       await this.getFuturesPositions(true);
+    } else {
+      this.getFuturesPositions(true);
     }
 
     return this._allActivePositions;
@@ -200,16 +202,16 @@ export class BNService {
 
   async getFuturesPositions(isActive: boolean) {
     const list = await this.client.getPositions();
-    const result = list.filter((p) => {
-      if (isActive) {
-        return PAIR_OF_INTEREST.includes(p.symbol) && p.positionAmt != 0;
-      } else {
-        return PAIR_OF_INTEREST.includes(p.symbol);
-      }
+    const activeResult = list.filter((p) => {
+      return PAIR_OF_INTEREST.includes(p.symbol) && p.positionAmt != 0;
     });
 
-    this._allActivePositions = result;
-    return result;
+    const normalResult = list.filter((p) => {
+      return PAIR_OF_INTEREST.includes(p.symbol);
+    });
+
+    this._allActivePositions = activeResult;
+    return isActive ? activeResult : normalResult;
   }
 
   async setLeverage(pair: string, leverage: number) {
