@@ -302,7 +302,9 @@ export class AppService implements OnApplicationBootstrap {
     this.logger.info(`${pair} 开始处理平仓`);
 
     const result = await this.bnService.closePosition(pair);
-    this.logger.info(`${pair} 已平仓`, { result: result });
+    if (result !== undefined) {
+      this.logger.info(`${pair} 已平仓`, { result: result });
+    }
     this.logger.info(`========= 结束交易 =========`, { result: result });
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
@@ -315,7 +317,9 @@ export class AppService implements OnApplicationBootstrap {
     this.logger.info(`${pair} 开始处理平仓`);
 
     const result = await this.bnService.closePosition(pair);
-    this.logger.info(`${pair} 已平仓`, { result: result });
+    if (result !== undefined) {
+      this.logger.info(`${pair} 已平仓`, { result: result });
+    }
     this.logger.info(`========= 结束交易 =========`, { result: result });
 
     await this.replyWithMarkdown(`🏦已平仓 ${pair}🏦`);
