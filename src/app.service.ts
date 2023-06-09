@@ -107,12 +107,13 @@ export class AppService implements OnApplicationBootstrap {
 
     const worker = async () => {
       await this.gmxService.startMonitor(account);
+      await ctx.reply(`✅开始监听 ${account}`);
     };
 
     retry(
       worker,
       -1,
-      5000,
+      2000,
       () => this.didStopMonitor,
       async (error) => {
         await ctx.reply(error, {
@@ -128,12 +129,6 @@ export class AppService implements OnApplicationBootstrap {
         disable_web_page_preview: true,
       });
     });
-
-    const msg = '✅启动成功，监控中...';
-    await ctx.reply(msg, {
-      disable_web_page_preview: true,
-    });
-    this.logger.info(msg);
   }
 
   @Command('stop_watch')
@@ -206,7 +201,7 @@ export class AppService implements OnApplicationBootstrap {
       const bnActivePosition = await this.bnService.getFuturePositionInfo(pair, true);
       const bnPositionInfo = await this.bnService.getFuturePositionInfo(pair, false);
       const bnBalance = await this.bnService.usdtBalance();
-      const preferLeverage = BigNumber.max(leverage.integerValue(), 1);
+      const preferLeverage = this.getPreferLeverage(leverage);
       const preferMargin = this.getPreferMargin(margin);
 
       if (bnBalance?.availableBalance === undefined) {
@@ -373,6 +368,7 @@ export class AppService implements OnApplicationBootstrap {
   }
 
   getPreferLeverage(leverage: BigNumber) {
-    return BigNumber.minimum(20, leverage.plus(1));
+    return BigNumber.max(leverage.integerValue(), 1);
+    // return BigNumber.minimum(20, leverage.plus(1));
   }
 }

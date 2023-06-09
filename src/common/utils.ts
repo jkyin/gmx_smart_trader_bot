@@ -75,14 +75,14 @@ export async function retry<T>(
     }
 
     if (retryCount == -1) {
-      const msg = `Retry failed: ${(error as Error).message}, error: ${(error as Error).stack}, continue retry`;
+      const msg = `Failed: ${(error as Error).message}, error: ${(error as Error).stack}, retry`;
       console.warn(msg);
       msgCallback(msg);
 
       await new Promise((resolve) => setTimeout(resolve, delay));
       return retry(fn, retryCount, delay, stopCondition, msgCallback);
     } else {
-      const msg = `Retry in ${delay / 1000}s, ${retryCount} attempts left, continue retry.`;
+      const msg = `Retry in ${delay / 1000}s, ${retryCount} attempts left, retry.`;
       console.warn(msg);
       msgCallback(msg);
 
