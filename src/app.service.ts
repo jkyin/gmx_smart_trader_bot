@@ -106,8 +106,8 @@ export class AppService implements OnApplicationBootstrap {
     const account = '0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66';
 
     const worker = async () => {
-      await this.gmxService.startMonitor(account);
       await ctx.reply(`✅开始监听 ${account}`);
+      await this.gmxService.startMonitor(account);
     };
 
     retry(
