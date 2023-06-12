@@ -56,7 +56,9 @@ export class GMXContractService {
         tradeData.action === 'IncreasePosition-Long' ||
         tradeData.action === 'IncreasePosition-Short' ||
         tradeData.action === 'DecreasePosition-Long' ||
-        tradeData.action === 'DecreasePosition-Short';
+        tradeData.action === 'DecreasePosition-Short' ||
+        tradeData.action === 'LiquidatePosition-Long' ||
+        tradeData.action === 'LiquidatePosition-Short';
       return !didTimeout && validAction;
     });
 
@@ -134,7 +136,7 @@ export class GMXContractService {
 
       const isLiquidation = params.flags?.isLiquidation == true;
 
-      const actionDisplay = isLiquidation ? `爆仓` : `减仓`;
+      const actionDisplay = isLiquidation ? `部分爆仓` : `减仓`;
       const msg = `${actionDisplay} ${indexToken.symbol} ${longOrShortText}, -${formatAmount(params.sizeDelta, USD_DECIMALS, 2, true)} USD, ${
         indexToken.symbol
       } Price: ${formatAmount(params.price, USD_DECIMALS, 2, true)} USD
@@ -146,7 +148,24 @@ export class GMXContractService {
         symbol: symbol,
         isLong: isLong,
         price: price,
-        status: isLiquidation ? 'Liquidated' : 'Decrease',
+        status: 'Decrease',
+      };
+    }
+
+    // 爆仓清算
+    if (tradeData.action === 'LiquidatePosition-Long' || tradeData.action === 'LiquidatePosition-Short') {
+      const msg = `${indexToken.symbol} ${longOrShortText} 已爆仓, -${formatAmount(params.sizeDelta, USD_DECIMALS, 2, true)} USD, ${
+        indexToken.symbol
+      } Price: ${formatAmount(params.price, USD_DECIMALS, 2, true)} USD
+    `;
+
+      this.logger.info(msg);
+
+      return {
+        symbol: symbol,
+        isLong: isLong,
+        price: price,
+        status: 'Liquidated',
       };
     }
   }
