@@ -46,7 +46,7 @@ export class GMXContractService {
     const actionsUrl = getServerUrl(this.chainId, `/actions?account=${account}`);
     const response = await axios.get<TradeAction[]>(actionsUrl);
 
-    if (response.statusText != 'OK') {
+    if (response.status >= 500) {
       this.logger.error(response);
       return [];
     }
