@@ -45,6 +45,12 @@ export class GMXContractService {
     const account = '0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66';
     const actionsUrl = getServerUrl(this.chainId, `/actions?account=${account}`);
     const response = await axios.get<TradeAction[]>(actionsUrl);
+
+    if (response.statusText != 'OK') {
+      this.logger.error(response);
+      return [];
+    }
+
     const result = response.data.filter((trade) => {
       const tradeData = trade.data;
       const timeout = 60;
