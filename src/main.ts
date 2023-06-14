@@ -36,7 +36,7 @@ async function bootstrap() {
     function (error) {
       // 超出 2xx 范围的状态码都会触发该函数。
       // 对响应错误做点什么
-      logger.error(error);
+      logger.error(error.toJSON());
       return Promise.reject(error);
     },
   );
@@ -44,7 +44,7 @@ async function bootstrap() {
   if (localTest) {
     axios.defaults.proxy = {
       protocol: 'http',
-      host: '127.0.0.1',
+      host: '0.0.0.0',
       port: 9091,
     };
   }
