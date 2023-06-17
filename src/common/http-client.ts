@@ -17,6 +17,7 @@ client.defaults.raxConfig = {
   retryDelay: 100,
   backoffType: 'static',
   onRetryAttempt: (err) => {
+    console.error(err.toJSON());
     const cfg = rax.getConfig(err);
     console.error(`Retry attempt #${cfg?.currentRetryAttempt}`);
   },
