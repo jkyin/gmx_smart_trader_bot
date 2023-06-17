@@ -5,9 +5,9 @@ import { getContract } from '../config/contracts';
 import { VaultReader__factory } from '../contracts/types';
 import { bigNumberify, bigNumberifyArray, expandDecimals } from '../wallets/numbers';
 import { getServerUrl } from '../config/backend';
-import axios from 'axios';
 import { InfoTokens, Token, TokenInfo } from '../types';
 import { ARBITRUM } from '../config/chains';
+import client from 'src/common/http-client';
 
 const DEFAULT_MAX_USDG_AMOUNT = expandDecimals(200 * 1000 * 1000, 18);
 const BASIS_POINTS_DIVISOR = 10000;
@@ -41,7 +41,7 @@ export async function useInfoTokens(
 
   const indexPricesUrl = getServerUrl(chainId, '/prices');
 
-  const indexPrices = (await axios.get<{ [address: string]: BigNumber }>(indexPricesUrl)).data;
+  const indexPrices = (await client.get<{ [address: string]: BigNumber }>(indexPricesUrl)).data;
 
   return {
     infoTokens: getInfoTokens(

@@ -4,7 +4,7 @@ import { getBotToken } from 'nestjs-telegraf';
 import { ConfigService } from '@nestjs/config';
 import { createWinstonLogger } from './common/winston-config.service';
 import BigNumber from 'bignumber.js';
-import axios from 'axios';
+import client from './common/http-client';
 
 async function bootstrap() {
   process.env.TZ = 'Asia/Shanghai';
@@ -26,23 +26,9 @@ async function bootstrap() {
   }
 
   BigNumber.set({ EXPONENTIAL_AT: 1e9 });
-  axios.defaults.timeout = 6000;
-  axios.interceptors.response.use(
-    function (response) {
-      // 2xx 范围内的状态码都会触发该函数。
-      // 对响应数据做点什么
-      return response;
-    },
-    function (error) {
-      // 超出 2xx 范围的状态码都会触发该函数。
-      // 对响应错误做点什么
-      logger.error(error.toJSON());
-      return Promise.reject(error);
-    },
-  );
 
   if (localTest) {
-    axios.defaults.proxy = {
+    client.defaults.proxy = {
       protocol: 'http',
       host: '0.0.0.0',
       port: 9091,

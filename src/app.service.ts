@@ -113,7 +113,7 @@ export class AppService implements OnApplicationBootstrap {
     retry(
       worker,
       -1,
-      2000,
+      1000,
       () => this.didStopMonitor,
       async (error) => {
         await ctx.reply(error, {

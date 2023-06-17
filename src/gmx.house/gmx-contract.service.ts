@@ -12,10 +12,10 @@ import { InfoTokens, PositionQuery, TradeAction, TradeActionDeal, TradeActionPar
 import { useInfoTokens } from './tokens/useInfoTokens';
 import { bigNumberify, bigNumberifyArray, formatAmount } from './wallets/numbers';
 import { getServerUrl } from './config/backend';
-import axios from 'axios';
 import { getTokenInfo } from './tokens/utils';
 import { USD_DECIMALS } from './config/legacy';
 import { dayjs } from 'src/common/day';
+import client from 'src/common/http-client';
 
 @Injectable()
 export class GMXContractService {
@@ -44,12 +44,7 @@ export class GMXContractService {
   async getInterestedTradeActions() {
     const account = '0x7B7736a2C07C4332FfaD45a039d2117aE15e3f66';
     const actionsUrl = getServerUrl(this.chainId, `/actions?account=${account}`);
-    const response = await axios.get<TradeAction[]>(actionsUrl);
-
-    if (response.status >= 500) {
-      this.logger.error(response);
-      return [];
-    }
+    const response = await client.get<TradeAction[]>(actionsUrl);
 
     const result = response.data.filter((trade) => {
       const tradeData = trade.data;
