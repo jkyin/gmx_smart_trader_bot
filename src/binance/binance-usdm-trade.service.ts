@@ -16,6 +16,7 @@ import * as _ from 'lodash';
 import { ConfigService } from '@nestjs/config';
 import winston from 'winston';
 import { createWinstonLogger } from 'src/common/winston-config.service';
+import { retryAsync } from 'ts-retry';
 
 @Injectable()
 export class BNService {
@@ -207,7 +208,15 @@ export class BNService {
       symbol: pair,
       leverage: leverage,
     };
-    return await this.client.setLeverage(params);
+
+    const result = await retryAsync(
+      async () => {
+        return await this.client.setLeverage(params);
+      },
+      { delay: 100, maxTry: 5 },
+    );
+
+    return result;
   }
 
   async setMarginType(pair: string, marginType: MarginType) {
@@ -215,7 +224,14 @@ export class BNService {
       symbol: pair,
       marginType: marginType,
     };
-    return await this.client.setMarginType(params);
+
+    const result = await retryAsync(
+      async () => {
+        return await this.client.setMarginType(params);
+      },
+      { delay: 100, maxTry: 5 },
+    );
+    return result;
   }
 
   async openPosition(pair: string, quantity: BigNumber, isLong: boolean) {
@@ -236,7 +252,13 @@ export class BNService {
 
     this.logger.info(`提交 ${pair} ${params.side} 订单`, { params: params });
 
-    const result = await this.client.submitNewOrder(params);
+    const result = await retryAsync(
+      async () => {
+        return await this.client.submitNewOrder(params);
+      },
+      { delay: 100, maxTry: 5 },
+    );
+
     return result;
   }
 
@@ -261,7 +283,12 @@ export class BNService {
 
     this.logger.info(`提交减仓订单`, { params: params });
 
-    const result = await this.client.submitNewOrder(params);
+    const result = await retryAsync(
+      async () => {
+        return await this.client.submitNewOrder(params);
+      },
+      { delay: 100, maxTry: 5 },
+    );
     return result;
   }
 
@@ -286,7 +313,13 @@ export class BNService {
 
     this.logger.info(`提交 ${pair} 平仓新订单`, { params: params });
 
-    return await this.client.submitNewOrder(params);
+    const result = await retryAsync(
+      async () => {
+        return await this.client.submitNewOrder(params);
+      },
+      { delay: 100, maxTry: 5 },
+    );
+    return result;
   }
 
   async closeAllPosition() {
@@ -309,6 +342,13 @@ export class BNService {
 
     this.logger.info(`提交批量平仓新订单`, { orders: orders });
 
-    return await this.client.submitMultipleOrders(orders);
+    const result = await retryAsync(
+      async () => {
+        return await this.client.submitMultipleOrders(orders);
+      },
+      { delay: 100, maxTry: 5 },
+    );
+
+    return result;
   }
 }
